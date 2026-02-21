@@ -1,6 +1,6 @@
 (* array -- linear memory safety library for bats *)
 (* Typed arrays with linear ownership -- no raw pointers. *)
-(* Ported from ward/memory with namespace-clean naming. *)
+(* Typed arrays with linear ownership. *)
 
 #include "share/atspre_staload.hats"
 
