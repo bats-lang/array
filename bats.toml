@@ -1,3 +1,4 @@
 [package]
 name = "array"
 kind = "lib"
+unsafe = true
