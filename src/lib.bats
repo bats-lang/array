@@ -121,6 +121,24 @@ borrow_join
   : borrow(a, l, n+m)
 
 (* ============================================================
+   Borrow single element
+   ============================================================ *)
+
+#pub fun{a:t@ype}
+borrow_at
+  {l:agz}{n:pos}{i:nat | i < n}{k:pos}
+  (f: !frozen(a, l, n, k) >> frozen(a, l, n, k+1),
+   b: !borrow(a, l, n), i: int i)
+  : borrow(a, l+i, 1)
+
+#pub fun{a:t@ype}
+drop_borrow_at
+  {l:agz}{n:pos}{i:nat | i < n}{k:int | k > 1}
+  (f: !frozen(a, l, n, k) >> frozen(a, l, n, k-1),
+   b: borrow(a, l+i, 1))
+  : void
+
+(* ============================================================
    Safe text -- compile-time character verification
    ============================================================ *)
 
@@ -332,7 +350,7 @@ _arr_arena_destroy(void *arena) {
 end
 
 (* ============================================================
-   Implementation -- main local block
+   Implementation -- main local block (trusted unsafe core)
    ============================================================ *)
 
 local
@@ -420,6 +438,15 @@ end
 
 implement{a}
 borrow_join{l}{n,m}{k}(f, left, right) = left
+
+(* -- Borrow at -- *)
+
+implement{a}
+borrow_at{l}{n}{i}{k}(f, b, i) =
+  $UNSAFE begin $UNSAFE.cast{ptr(l+i)}(ptr_add<a>(b, i)) end
+
+implement{a}
+drop_borrow_at{l}{n}{i}{k}(f, b) = ()
 
 (* -- Text -- *)
 
@@ -522,7 +549,6 @@ end (* local -- main implementation block *)
 
 (* ============================================================
    Content text -- separate local block
-   (No $UNSAFE needed: delegates to already-audited arr functions)
    ============================================================ *)
 
 local
