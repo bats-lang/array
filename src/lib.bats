@@ -305,6 +305,8 @@ arena_return
 
 $UNSAFE begin
 %{#
+#ifndef _ARR_RUNTIME_DEFINED
+#define _ARR_RUNTIME_DEFINED
 static inline void
 _arr_set_byte(void *p, int off, int v) {
   ((unsigned char *)p)[off] = (unsigned char)v;
@@ -346,6 +348,7 @@ _arr_arena_destroy(void *arena) {
   free(a->base);
   free((void *)a);
 }
+#endif /* _ARR_RUNTIME_DEFINED */
 %}
 end
 
