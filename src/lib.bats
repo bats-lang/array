@@ -172,6 +172,10 @@ drop_borrow_at
   (t: text(n), i: int i)
   : byte
 
+#pub fun text_of_chars
+  {n:pos}
+  (n: int n, chars: &(@[char][n])): text(n)
+
 (* ============================================================
    Text from bytes -- runtime SAFE_CHAR validation
    ============================================================ *)
@@ -467,6 +471,21 @@ text_done{n}(b) = b
 implement
 text_get{n,i}(t, i) =
   $UNSAFE begin $UNSAFE.ptr0_get<byte>(ptr_add<byte>(t, i)) end
+
+implement
+text_of_chars{n}(n, chars) = let
+  val p = _malloc_bytes(n)
+  fun loop {i:nat | i <= n} .<n - i>.
+    (p: ptr, i: int i, n: int n, cp: ptr): void =
+    if i >= n then ()
+    else let
+      val c = $UNSAFE begin $UNSAFE.ptr0_get_at<char>(cp, i) end
+      val () = $UNSAFE begin $UNSAFE.ptr0_set_at<byte>(p, i,
+        $UNSAFE.cast{byte}(char2int0(c))) end
+    in loop(p, i + 1, n, cp) end
+  val cp = $UNSAFE begin $UNSAFE.cast{ptr}(addr@chars) end
+  val () = loop(p, 0, n, cp)
+in $UNSAFE begin $UNSAFE.castvwtp0{text(n)}(p) end end
 
 implement
 text_from_bytes{lb}{n}(src, len) = let
