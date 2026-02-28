@@ -359,6 +359,7 @@ end
 
 local
 
+$UNSAFE begin
   assume arr(a, l, n) = ptr l
   assume frozen(a, l, n, k) = ptr l
   assume borrow(a, l, n) = ptr l
@@ -366,6 +367,7 @@ local
   assume text_builder(n, i) = ptr
   assume arena(l, max, k) = ptr l
   assume arena_token(la, l, n) = ptr l
+end
 
 in
 
@@ -557,8 +559,10 @@ end (* local -- main implementation block *)
 
 local
 
+$UNSAFE begin
   assume content_text(l, n) = arr(byte, l, n)
   assume content_text_builder(l, n, i) = arr(byte, l, n)
+end
 
 in
 
@@ -589,7 +593,7 @@ in ar end
 
 implement
 write_content_text{ld}{ls}{m}{n}{off}(dst, off_val, src, len) = let
-  fun loop{i:nat | i <= n}
+  fun loop{i:nat | i <= n} .<n - i>.
     (dst: !arr(byte, ld, m), src: !content_text(ls, n),
      off_val: int off, i: int i, len: int n): void =
     if i < len then let
