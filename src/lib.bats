@@ -351,6 +351,7 @@ _arr_arena_destroy(void *arena) {
 }
 #endif /* _ARR_RUNTIME_DEFINED */
 %}
+end
 
 (* ============================================================
    Implementation -- main local block (trusted unsafe core)
@@ -358,6 +359,7 @@ _arr_arena_destroy(void *arena) {
 
 local
 
+$UNSAFE begin
   assume arr(a, l, n) = ptr l
   assume frozen(a, l, n, k) = ptr l
   assume borrow(a, l, n) = ptr l
@@ -365,6 +367,7 @@ local
   assume text_builder(n, i) = ptr
   assume arena(l, max, k) = ptr l
   assume arena_token(la, l, n) = ptr l
+end
 
 in
 
@@ -556,8 +559,10 @@ end (* local -- main implementation block *)
 
 local
 
+$UNSAFE begin
   assume content_text(l, n) = arr(byte, l, n)
   assume content_text_builder(l, n, i) = arr(byte, l, n)
+end
 
 in
 
@@ -598,5 +603,3 @@ write_content_text{ld}{ls}{m}{n}{off}(dst, off_val, src, len) = let
 in loop(dst, src, off_val, 0, len) end
 
 end (* local -- content text *)
-
-end (* $UNSAFE begin from line 307 *)
