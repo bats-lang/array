@@ -351,7 +351,6 @@ _arr_arena_destroy(void *arena) {
 }
 #endif /* _ARR_RUNTIME_DEFINED */
 %}
-end
 
 (* ============================================================
    Implementation -- main local block (trusted unsafe core)
@@ -589,7 +588,7 @@ in ar end
 
 implement
 write_content_text{ld}{ls}{m}{n}{off}(dst, off_val, src, len) = let
-  fun loop{i:nat | i <= n}
+  fun loop{i:nat | i <= n} .<n - i>.
     (dst: !arr(byte, ld, m), src: !content_text(ls, n),
      off_val: int off, i: int i, len: int n): void =
     if i < len then let
@@ -599,3 +598,5 @@ write_content_text{ld}{ls}{m}{n}{off}(dst, off_val, src, len) = let
 in loop(dst, src, off_val, 0, len) end
 
 end (* local -- content text *)
+
+end (* $UNSAFE begin from line 307 *)
