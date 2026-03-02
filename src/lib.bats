@@ -351,6 +351,7 @@ _arr_arena_destroy(void *arena) {
 }
 #endif /* _ARR_RUNTIME_DEFINED */
 %}
+end
 
 (* ============================================================
    Implementation -- main local block (trusted unsafe core)
@@ -358,6 +359,7 @@ _arr_arena_destroy(void *arena) {
 
 local
 
+$UNSAFE begin
   assume arr(a, l, n) = ptr l
   assume frozen(a, l, n, k) = ptr l
   assume borrow(a, l, n) = ptr l
@@ -365,13 +367,14 @@ local
   assume text_builder(n, i) = ptr
   assume arena(l, max, k) = ptr l
   assume arena_token(la, l, n) = ptr l
+end
 
 in
 
 fn _proven_int2byte{i:nat | i < 256}(i: int i): byte =
   $UNSAFE begin $UNSAFE.cast{byte}(i) end
 
-extern fun _malloc_bytes (n: int): [l:agz] ptr l = "mac#malloc"
+$UNSAFE begin extern fun _malloc_bytes (n: int): [l:agz] ptr l = "mac#malloc" end
 
 (* -- Allocate / free -- *)
 
@@ -379,14 +382,14 @@ implement{a}
 alloc{n}(n) = let
   val nbytes = n * sz2i(sizeof<a>)
   val p = _malloc_bytes(nbytes)
-  val () = $extfcall(void, "memset", p, 0, nbytes)
+  val () = $UNSAFE begin $extfcall(void, "memset", p, 0, nbytes) end
 in
   p
 end
 
 implement{a}
 free{l}{n}(arr) =
-  $extfcall(void, "free", arr)
+  $UNSAFE begin $extfcall(void, "free", arr) end
 
 (* -- Element access -- *)
 
@@ -470,7 +473,7 @@ text_get{n,i}(t, i) =
 
 implement
 text_from_bytes{lb}{n}(src, len) = let
-  fun loop {i:nat | i <= n}
+  fun loop {i:nat | i <= n} .<n - i>.
     (src: ptr, i: int i, len: int n): bool =
     if i >= len then true
     else let
@@ -487,7 +490,7 @@ text_from_bytes{lb}{n}(src, len) = let
 in
   if all_safe then let
     val p = _malloc_bytes(len)
-    val () = $extfcall(void, "memcpy", p, src, len)
+    val () = $UNSAFE begin $extfcall(void, "memcpy", p, src, len) end
     val t = $UNSAFE begin $UNSAFE.cast{text(n)}(p) end
   in text_ok(t) end
   else text_fail()
@@ -500,37 +503,37 @@ int2byte{i}(i) = _proven_int2byte(i)
 
 implement
 write_byte{l}{n}{i}{v}(arr, i, v) =
-  $extfcall(void, "_arr_set_byte", arr, i, v)
+  $UNSAFE begin $extfcall(void, "_arr_set_byte", arr, i, v) end
 
 implement
 write_i32{l}{n}{i}(arr, i, v) =
-  $extfcall(void, "_arr_set_i32", arr, i, v)
+  $UNSAFE begin $extfcall(void, "_arr_set_i32", arr, i, v) end
 
 implement
 write_borrow{ld}{ls}{m}{n}{off}(dst, off_val, src, len) =
-  $extfcall(void, "_arr_copy_at", dst, off_val, src, len)
+  $UNSAFE begin $extfcall(void, "_arr_copy_at", dst, off_val, src, len) end
 
 implement
 write_text{l}{m}{n}{off}(dst, off_val, src, len) =
-  $extfcall(void, "_arr_copy_at", dst, off_val, src, len)
+  $UNSAFE begin $extfcall(void, "_arr_copy_at", dst, off_val, src, len) end
 
 implement
 write_u16le{l}{n}{i}{v}(arr, i, v) = let
   val v0 : int = v
-  val () = $extfcall(void, "_arr_set_byte", arr, i, v0)
-  val () = $extfcall(void, "_arr_set_byte", arr, i + 1, v0 / 256)
+  val () = $UNSAFE begin $extfcall(void, "_arr_set_byte", arr, i, v0) end
+  val () = $UNSAFE begin $extfcall(void, "_arr_set_byte", arr, i + 1, v0 / 256) end
 in () end
 
 (* -- Arena -- *)
 
+$UNSAFE begin
 extern fun _arena_create_impl
   (max: int): [l:agz] ptr l = "mac#_arr_arena_create"
-
 extern fun _arena_alloc_impl
   (arena: ptr, size: int): [l:agz] ptr l = "mac#_arr_arena_alloc"
-
 extern fun _arena_destroy_impl
   (arena: ptr): void = "mac#_arr_arena_destroy"
+end
 
 implement
 arena_create{max}(max_size) = _arena_create_impl(max_size)
@@ -556,8 +559,10 @@ end (* local -- main implementation block *)
 
 local
 
+$UNSAFE begin
   assume content_text(l, n) = arr(byte, l, n)
   assume content_text_builder(l, n, i) = arr(byte, l, n)
+end
 
 in
 
@@ -598,5 +603,3 @@ write_content_text{ld}{ls}{m}{n}{off}(dst, off_val, src, len) = let
 in loop(dst, src, off_val, 0, len) end
 
 end (* local -- content text *)
-
-end (* $UNSAFE *)
