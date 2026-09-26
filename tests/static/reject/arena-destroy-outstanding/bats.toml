@@ -1,0 +1,6 @@
+[package]
+name = "arena-destroy-outstanding"
+kind = "bin"
+
+[dependencies]
+"array" = ""

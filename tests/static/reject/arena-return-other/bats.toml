@@ -1,0 +1,6 @@
+[package]
+name = "arena-return-other"
+kind = "bin"
+
+[dependencies]
+"array" = ""

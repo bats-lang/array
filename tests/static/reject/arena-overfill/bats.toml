@@ -1,0 +1,6 @@
+[package]
+name = "arena-overfill"
+kind = "bin"
+
+[dependencies]
+"array" = ""
