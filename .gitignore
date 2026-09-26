@@ -6,3 +6,6 @@ debug/
 release/
 _bats_*
 docs/
+build/
+dist/
+bats_modules/
