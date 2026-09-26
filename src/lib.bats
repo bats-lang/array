@@ -189,6 +189,8 @@ drop_borrow_at
   {l:agz}{n:nat}{i:nat | i + 2 <= n}{v:nat | v < 65536}
   (arr: !arr(byte, l, n), i: int i, v: int v): void
 
+(* v as 4 little-endian bytes at i (two's complement), on any host and
+   at any offset. *)
 #pub fun write_i32
   {l:agz}{n:nat}{i:nat | i + 4 <= n}
   (arr: !arr(byte, l, n), i: int i, v: int): void
@@ -267,7 +269,12 @@ _arr_set_byte(void *p, int off, int v) {
 }
 static inline void
 _arr_set_i32(void *p, int off, int v) {
-  *(int *)(((char *)p) + off) = v;
+  unsigned char *d = ((unsigned char *)p) + off;
+  unsigned int u = (unsigned int)v;
+  d[0] = (unsigned char)u;
+  d[1] = (unsigned char)(u >> 8);
+  d[2] = (unsigned char)(u >> 16);
+  d[3] = (unsigned char)(u >> 24);
 }
 static inline void
 _arr_copy_at(void *dst, int off, void *src, int len) {

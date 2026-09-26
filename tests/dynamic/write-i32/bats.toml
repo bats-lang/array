@@ -1,0 +1,6 @@
+[package]
+name = "write-i32"
+kind = "bin"
+
+[dependencies]
+"array" = ""
