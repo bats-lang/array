@@ -18,6 +18,11 @@
    Allocate / free
    ============================================================ *)
 
+(* n elements, all zero bytes. Only element types for which zero bytes
+   are a valid value have an instance: byte, char, bool, int, uint and
+   Int ([i:int] int i).
+   For any other type (a pointer, say, which would be null) there is no
+   instance, so alloc<T> does not compile. *)
 #pub fun{a:t@ype}
 alloc
   {n:pos | n <= 1048576}
@@ -375,14 +380,19 @@ $UNSAFE begin extern fun _malloc_bytes (n: int): [l:agz] ptr l = "mac#malloc" en
 
 (* -- Allocate / free -- *)
 
-implement{a}
-alloc{n}(n) = let
-  val nbytes = n * sz2i(sizeof<a>)
-  val p = _malloc_bytes(nbytes)
-  val () = $UNSAFE begin $extfcall(void, "memset", p, 0, nbytes) end
-in
-  p
-end
+$UNSAFE begin extern fun _calloc (n: int, size: size_t): [l:agz] ptr l = "mac#calloc" end
+
+(* n zeroed elements of a. calloc does the multiplication, so the
+   template needs no arithmetic instance from the caller's prelude. *)
+fn{a:t@ype} _alloc_zeroed {n:pos} (n: int n): [l:agz] ptr l =
+  _calloc(n, sizeof<a>)
+
+implement alloc<byte>(n) = _alloc_zeroed<byte>(n)
+implement alloc<char>(n) = _alloc_zeroed<char>(n)
+implement alloc<bool>(n) = _alloc_zeroed<bool>(n)
+implement alloc<int>(n) = _alloc_zeroed<int>(n)
+implement alloc<uint>(n) = _alloc_zeroed<uint>(n)
+implement alloc<Int>(n) = _alloc_zeroed<Int>(n)
 
 implement{a}
 free{l}{n}(arr) =

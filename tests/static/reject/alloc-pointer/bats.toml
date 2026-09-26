@@ -1,0 +1,6 @@
+[package]
+name = "alloc-ptr"
+kind = "bin"
+
+[dependencies]
+"array" = ""
