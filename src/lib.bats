@@ -52,22 +52,6 @@ set
   : void
 
 (* ============================================================
-   Split / join (sub-array with size tracking)
-   ============================================================ *)
-
-#pub fun{a:t@ype}
-split
-  {l:agz}{n,m:nat | m <= n}
-  (arr: arr(a, l, n), m: int m)
-  : @(arr(a, l, m), arr(a, l+m, n-m))
-
-#pub fun{a:t@ype}
-join
-  {l:agz}{n,m:nat}
-  (left: arr(a, l, n), right: arr(a, l+n, m))
-  : arr(a, l, n+m)
-
-(* ============================================================
    Freeze / thaw borrow protocol
    ============================================================ *)
 
@@ -346,18 +330,6 @@ get{l}{n,i}(arr, i) =
 implement{a}
 set{l}{n,i}(arr, i, v) =
   $UNSAFE begin $UNSAFE.ptr0_set<a>(ptr_add<a>(arr, i), v) end
-
-(* -- Split / join -- *)
-
-implement{a}
-split{l}{n,m}(arr, m) = let
-  val tail = $UNSAFE begin $UNSAFE.cast{ptr(l+m)}(ptr_add<a>(arr, m)) end
-in
-  @(arr, tail)
-end
-
-implement{a}
-join{l}{n,m}(left, right) = left
 
 (* -- Freeze / thaw -- *)
 
