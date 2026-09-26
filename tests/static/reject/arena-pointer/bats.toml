@@ -1,0 +1,6 @@
+[package]
+name = "arena-pointer"
+kind = "bin"
+
+[dependencies]
+"array" = ""

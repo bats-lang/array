@@ -1,0 +1,6 @@
+[package]
+name = "arena-free-piece"
+kind = "bin"
+
+[dependencies]
+"array" = ""
