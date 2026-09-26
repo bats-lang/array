@@ -43,3 +43,9 @@ jobs:
         run: |
           export PATH=~/bats-bin:$PATH
           bats check
+
+      - name: Static tests
+        run: |
+          export PATH=~/bats-bin:$PATH
+          git clone https://github.com/bats-lang/repository-prototype.git ~/repository
+          tests/static/run.sh ~/repository

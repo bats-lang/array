@@ -1,0 +1,6 @@
+[package]
+name = "alloc-ok"
+kind = "bin"
+
+[dependencies]
+"array" = ""
