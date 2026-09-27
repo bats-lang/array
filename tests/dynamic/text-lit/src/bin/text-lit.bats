@@ -2,7 +2,7 @@
 #use array as A
 
 (* A string literal's text reads back its bytes, and writes them into an
-   array as write_text does for any text *)
+   array as write_text does for any text; the empty literal's is text(0) *)
 implement main0 () = let
   val t = $A.text_lit("qpgi")
   val () = println! ("bytes ",
@@ -13,4 +13,5 @@ implement main0 () = let
   val () = println! ("written ", byte2int0($A.get<byte>(a, 0)), " ",
     byte2int0($A.get<byte>(a, 1)), " ", byte2int0($A.get<byte>(a, 4)), " ",
     byte2int0($A.get<byte>(a, 5)))
+  val _e: $A.text(0) = $A.text_lit("")
 in $A.free<byte>(a) end
