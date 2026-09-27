@@ -169,9 +169,10 @@ drop_borrow_at
 (* The text of a string's n bytes, not a copy: a string is never freed
    or changed, so its bytes stay as they are. A string literal's text
    costs no allocation, where text_build (and every text built from
-   bytes) allocates one that is never freed. *)
+   bytes) allocates one that is never freed. The empty literal's text,
+   text(0), has no byte to read (text_get needs i < n). *)
 #pub fun text_lit
-  {n:pos}
+  {n:nat}
   (s: string n)
   : text(n)
 
