@@ -166,6 +166,15 @@ drop_borrow_at
   (t: text(n), i: int i)
   : byte
 
+(* The text of a string's n bytes, not a copy: a string is never freed
+   or changed, so its bytes stay as they are. A string literal's text
+   costs no allocation, where text_build (and every text built from
+   bytes) allocates one that is never freed. *)
+#pub fun text_lit
+  {n:pos}
+  (s: string n)
+  : text(n)
+
 
 (* ============================================================
    Text from bytes -- runtime SAFE_CHAR validation
@@ -476,6 +485,10 @@ in b end
 
 implement
 text_done{n}(b) = b
+
+implement
+text_lit{n}(s) =
+  $UNSAFE begin $UNSAFE.cast{text(n)}(string2ptr(s)) end
 
 implement
 text_get{n,i}(t, i) =
