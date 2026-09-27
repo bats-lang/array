@@ -1,0 +1,6 @@
+[package]
+name = "text-lit"
+kind = "bin"
+
+[dependencies]
+"array" = ""
