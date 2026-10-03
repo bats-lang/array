@@ -119,14 +119,16 @@ implement main0 () = let
 
   (* -- 8. Arena: create, alloc, return, destroy -- *)
   val () = println! ("--- arena ---")
-  val ar = $A.arena_create(4096)
-  val @(tok, abuf) = $A.arena_alloc<int>(ar, 5)
-  val () = $A.set<int>(abuf, 0, 42)
-  val () = $A.set<int>(abuf, 3, 77)
-  val () = println! ("arena[0]=", $A.get<int>(abuf, 0))
-  val () = println! ("arena[3]=", $A.get<int>(abuf, 3))
-  val () = $A.arena_return<int>(ar, tok, abuf)
-  val () = $A.arena_destroy(ar)
+  val () = (case+ $A.arena_create<int>($A.Arena64KiB() | 65536) of
+    | ~$A.arena_some(ar) => let
+        val abuf = $A.arena_alloc<int>(ar, 5)
+        val () = $A.set<int>(abuf, 0, 42)
+        val () = $A.set<int>(abuf, 3, 77)
+        val () = println! ("arena[0]=", $A.get<int>(abuf, 0))
+        val () = println! ("arena[3]=", $A.get<int>(abuf, 3))
+        val () = $A.arena_return<int>(ar, abuf)
+      in $A.arena_destroy<int>(ar) end
+    | ~$A.arena_none() => println! ("no arena"))
   val () = println! ("arena destroyed")
 
 in () end

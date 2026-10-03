@@ -1,0 +1,6 @@
+[package]
+name = "arena-runtime-size"
+kind = "bin"
+
+[dependencies]
+"array" = ""

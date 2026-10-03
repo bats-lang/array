@@ -1,0 +1,6 @@
+[package]
+name = "arena-not-a-class"
+kind = "bin"
+
+[dependencies]
+"array" = ""
