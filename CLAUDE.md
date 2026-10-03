@@ -13,8 +13,8 @@ pieces whose sizes the types account for, and released as a whole.
 
 ## The arena is the pool
 
-`arena_create<a>(max)` reserves one zeroed region of `max` elements (up to
-268435456); `arena_alloc` hands out pieces of it, `arena_return` takes them
+`arena_create<a>(class | max)` reserves one zeroed region of `max`
+elements, `max` one of the size classes; `arena_alloc` hands out pieces of it, `arena_return` takes them
 back, and `arena_destroy` releases the region. It is sound by type, with
 no runtime checks:
 
@@ -33,12 +33,29 @@ no runtime checks:
 * When the region cannot be had, `arena_create` returns `arena_none`,
   never a null arena.
 
+## An arena's size is a class
+
+An arena is one of a few sizes fixed at compile time (`ARENA_CLASS`:
+64 KiB, 256 KiB, 1 MiB, 4 MiB and 16 MiB elements, powers of 4), so a
+freed region is the size of the next one asked for: the allocator can
+reuse it whole (bats-lang/bats#241) instead of piling up regions of odd
+sizes. `arena_create` takes a proof `ARENA_CLASS(max)`, whose
+constructors are each indexed by a literal, so a size computed at run
+time, or a constant that is not a class, does not type-check.
+`arena_class_of(n)` gives the smallest class that holds `n` elements,
+or `arena_too_large` over `ARENA_MOST` (16 MiB). The classes were chosen
+by measuring EPUBs (bats-lang/quire#251): a page's arena is 4 MiB, and
+the largest file a reader holds whole (its sync file) is 16 MiB. Do not
+add a class for a size one caller computes; take the smallest class that
+holds it.
+
 The first arena (removed in #21 and restored here) had none of these:
 `arena_alloc` never compared its offset to the size, its arrays could be
 freed, and it handed out zero bytes as any type. Fix such problems; do
 not delete the facility.
 
-`tests/static` rejects each misuse (overfill, freeing a piece, returning
+`tests/static` rejects each misuse (a size that is not a class, a size
+computed at run time, overfill, freeing a piece, returning
 it to another arena, destroying with a piece out, a pointer element
 type); `tests/dynamic/arena` exercises pieces past the 1 MiB `alloc`
 bound.
