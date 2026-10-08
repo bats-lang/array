@@ -43,6 +43,31 @@ it to another arena, destroying with a piece out, a pointer element
 type); `tests/dynamic/arena` exercises pieces past the 1 MiB `alloc`
 bound.
 
+## Byte arrays know their contents
+
+`barr(l, n, cs)` is an array of n bytes at l that holds the cells `cs`
+(`cnil`, `ccons`), so a program can prove what it reads and writes:
+
+* `barr_get` gives the cell with the proof `NTH(cs, i, v)`; `barr_set`
+  consumes the array and gives it back with `SETC(cs, i, v, cs2)`;
+  `barr_alloc` and `barr_of_arr` give cells nothing is known of (and
+  `CLEN(cs, n)`: their number), `barr_to_arr` takes the cells away so that
+  what knows nothing of them (a platform call that fills the array) may
+  write it, and `barr_copy` gives another array of the same cells.
+* The lemmas are proved here, by the compiler, with no `praxi` and no
+  `assume`: `setc_len`, `setc_nth_same`, `setc_nth_other` (the other cells
+  are as they were; needs `i != j`), `nth_in_len` and `nth_functional`.
+* The trusted core is the six primitives in the implementation block of
+  `lib.bats`: each does what its type says to the memory (reads or writes
+  one byte, copies, allocates) and fabricates the proof its type gives.
+  Nothing else in the package or in a package using it makes a proof of
+  an array's contents. `tests/dynamic/content` runs them; `tests/static`
+  rejects a cell claimed to hold another value, a cell past the end, and
+  the lemma about other cells used for the same cell.
+* A proof about a `barr` holds only while the program holds it: `barr_to_arr`
+  forgets the cells, and `barr_of_arr` starts again from cells nothing is
+  known of.
+
 ## CI is pinned
 
 Every input to CI is pinned in the source (bats-lang/repository-prototype#269),
