@@ -6,7 +6,7 @@ staload C = "array/src/content.sats"
    other cells needs another cell. *)
 implement main0 () = let
   val (len | a) = $C.barr_alloc(4)
-  val (before | a) = $C.barr_get(a, 0)
+  val (before | v) = $C.barr_get(a, 0)
   val (set | a) = $C.barr_set(a, 0, 65)
   prval still = $C.setc_nth_other(set, before)
   val () = $C.barr_free(a)
