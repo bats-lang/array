@@ -7,7 +7,7 @@
 
 #include "share/atspre_staload.hats"
 
-staload "lib.sats"
+staload "./lib.bats"
 
 (* ============================================================
    What an array holds
