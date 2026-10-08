@@ -1,0 +1,6 @@
+[package]
+name = "content-same-cell-is-other"
+kind = "bin"
+
+[dependencies]
+"array" = ""

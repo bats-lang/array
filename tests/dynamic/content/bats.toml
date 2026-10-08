@@ -1,0 +1,6 @@
+[package]
+name = "content"
+kind = "bin"
+
+[dependencies]
+"array" = ""
