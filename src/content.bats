@@ -97,62 +97,81 @@ primplement nth_functional {cs}{i}{v,w} (p, q) = _nth_functional(p, q)
 (* n bytes at l holding the cells cs *)
 #pub absvtype barr(l:addr, n:int, cs:cells) = ptr
 
-$UNSAFE begin
-%{#
-#ifndef _BARR_RUNTIME_DEFINED
-#define _BARR_RUNTIME_DEFINED
-static inline void *
-_barr_alloc(int n) {
-  return calloc(n, 1);
-}
-static inline int
-_barr_get(void *p, int i) {
-  return ((unsigned char *)p)[i];
-}
-static inline void *
-_barr_set(void *p, int i, int v) {
-  ((unsigned char *)p)[i] = (unsigned char)v;
-  return p;
-}
-static inline void *
-_barr_same(void *p) {
-  return p;
-}
-static inline void *
-_barr_copy(void *p, int n) {
-  unsigned char *d = (unsigned char *)calloc(n, 1);
-  unsigned char *s = (unsigned char *)p;
-  int i;
-  for (i = 0; i < n; i++) d[i] = s[i];
-  return d;
-}
-static inline void
-_barr_free(void *p) {
-  free(p);
-}
-#endif /* _BARR_RUNTIME_DEFINED */
-%}
-end
 
 (* n bytes, all zero, which the types know nothing more of *)
-#pub fun barr_alloc {n:pos | n <= 1048576} (n: int n): [l:agz][cs:cells] (CLEN(cs, n) | barr(l, n, cs)) = "mac#_barr_alloc"
+#pub fun barr_alloc {n:pos | n <= 1048576} (n: int n): [l:agz][cs:cells] (CLEN(cs, n) | barr(l, n, cs))
 
-#pub fun barr_free {l:agz}{n:nat}{cs:cells} (a: barr(l, n, cs)): void = "mac#_barr_free"
+#pub fun barr_free {l:agz}{n:nat}{cs:cells} (a: barr(l, n, cs)): void
 
 (* Cell i, with the proof that it is cell i of the cells *)
 #pub fun barr_get {l:agz}{n,i:nat | i < n}{cs:cells} (a: !barr(l, n, cs), i: int i)
-  : [v:int | 0 <= v; v < 256] (NTH(cs, i, v) | int v) = "mac#_barr_get"
+  : [v:int | 0 <= v; v < 256] (NTH(cs, i, v) | int v)
 
 (* Cell i set to v: the cells that are left, with the proof that they are *)
 #pub fun barr_set {l:agz}{n,i:nat | i < n}{cs:cells}{v:int | 0 <= v; v < 256} (a: barr(l, n, cs), i: int i, v: int v)
-  : [cs2:cells] (SETC(cs, i, v, cs2) | barr(l, n, cs2)) = "mac#_barr_set"
+  : [cs2:cells] (SETC(cs, i, v, cs2) | barr(l, n, cs2))
 
 (* The array that alloc gives, taken to hold cells nothing is known of; it
    is not an array of alloc any more *)
-#pub fun barr_of_arr {l:agz}{n:nat} (a: arr(byte, l, n)): [cs:cells] (CLEN(cs, n) | barr(l, n, cs)) = "mac#_barr_same"
+#pub fun barr_of_arr {l:agz}{n:nat} (a: arr(byte, l, n)): [cs:cells] (CLEN(cs, n) | barr(l, n, cs))
 
 (* The array without its cells, to be written by what knows nothing of them *)
-#pub fun barr_to_arr {l:agz}{n:nat}{cs:cells} (a: barr(l, n, cs)): arr(byte, l, n) = "mac#_barr_same"
+#pub fun barr_to_arr {l:agz}{n:nat}{cs:cells} (a: barr(l, n, cs)): arr(byte, l, n)
 
 (* Another array holding the same cells *)
-#pub fun barr_copy {l:agz}{n:pos}{cs:cells} (a: !barr(l, n, cs), n: int n): [m:agz] barr(m, n, cs) = "mac#_barr_copy"
+#pub fun barr_copy {l:agz}{n:pos}{cs:cells} (a: !barr(l, n, cs), n: int n): [m:agz] barr(m, n, cs)
+
+(* ============================================================
+   Implementation -- an array of bytes is its address (trusted core)
+   ============================================================ *)
+
+local
+
+$UNSAFE begin
+  assume barr(l, n, cs) = ptr l
+end
+
+in
+
+$UNSAFE begin extern fun _calloc_bytes (n: int, size: size_t): [l:agz] ptr l = "mac#calloc" end
+
+implement barr_alloc {n} (n) =
+  $UNSAFE begin
+    $UNSAFE.castvwtp0{[l:agz][cs:cells] (CLEN(cs, n) | barr(l, n, cs))}(_calloc_bytes(n, sizeof<byte>))
+  end
+
+implement barr_free {l}{n}{cs} (a) =
+  $UNSAFE begin $extfcall(void, "free", a) end
+
+implement barr_get {l}{n,i}{cs} (a, i) =
+  $UNSAFE begin
+    $UNSAFE.cast{[v:int | 0 <= v; v < 256] (NTH(cs, i, v) | int v)}(byte2int0($UNSAFE.ptr0_get<byte>(ptr_add<byte>(a, i))))
+  end
+
+implement barr_set {l}{n,i}{cs}{v} (a, i, v) = let
+  val () = $UNSAFE begin $UNSAFE.ptr0_set<byte>(ptr_add<byte>(a, i), $UNSAFE.cast{byte}(v)) end
+in
+  $UNSAFE begin $UNSAFE.castvwtp0{[cs2:cells] (SETC(cs, i, v, cs2) | barr(l, n, cs2))}(a) end
+end
+
+implement barr_of_arr {l}{n} (a) =
+  $UNSAFE begin $UNSAFE.castvwtp0{[cs:cells] (CLEN(cs, n) | barr(l, n, cs))}(a) end
+
+implement barr_to_arr {l}{n}{cs} (a) =
+  $UNSAFE begin $UNSAFE.castvwtp0{arr(byte, l, n)}(a) end
+
+implement barr_copy {l}{n}{cs} (a, n) = let
+  val copy = $UNSAFE begin _calloc_bytes(n, sizeof<byte>) end
+  fun go {i:nat | i <= n} .<n - i>. (i: int i): void =
+    if i >= n then ()
+    else let
+      val () = $UNSAFE begin
+        $UNSAFE.ptr0_set<byte>(ptr_add<byte>(copy, i), $UNSAFE.ptr0_get<byte>(ptr_add<byte>(a, i)))
+      end
+    in go(i + 1) end
+  val () = go(0)
+in
+  $UNSAFE begin $UNSAFE.castvwtp0{[m:agz] barr(m, n, cs)}(copy) end
+end
+
+end
