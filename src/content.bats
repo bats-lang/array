@@ -95,7 +95,7 @@ primplement nth_functional {cs}{i}{v,w} (p, q) = _nth_functional(p, q)
    ============================================================ *)
 
 (* n bytes at l holding the cells cs *)
-#pub absvtype barr(l:addr, n:int, cs:cells)
+#pub absvtype barr(l:addr, n:int, cs:cells) = ptr
 
 $UNSAFE begin
 %{#
@@ -156,16 +156,3 @@ end
 
 (* Another array holding the same cells *)
 #pub fun barr_copy {l:agz}{n:pos}{cs:cells} (a: !barr(l, n, cs), n: int n): [m:agz] barr(m, n, cs) = "mac#_barr_copy"
-
-(* ============================================================
-   Implementation -- an array of bytes is its address
-   ============================================================ *)
-
-local
-
-$UNSAFE begin
-  assume barr(l, n, cs) = ptr l
-end
-
-in
-end
