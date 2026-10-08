@@ -129,6 +129,7 @@ local
 
 $UNSAFE begin
   assume barr(l, n, cs) = ptr l
+  assume arrx(a, l, n, o) = ptr l
 end
 
 in
