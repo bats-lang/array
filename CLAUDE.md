@@ -40,7 +40,8 @@ not delete the facility.
 
 `tests/static` rejects each misuse (overfill, freeing a piece, returning
 it to another arena, destroying with a piece out, a pointer element
-type); `tests/dynamic/arena` exercises pieces past the 1 MiB `alloc`
+type); a piece lent as a `barr` and given back is below, under byte
+arrays; `tests/dynamic/arena` exercises pieces past the 1 MiB `alloc`
 bound.
 
 ## Byte arrays know their contents
@@ -74,9 +75,25 @@ bound.
   in the same trusted block, tested by `tests/dynamic/borrow` and
   rejected when misused by `tests/static/reject/borrow-*`. The plain
   `borrow` of `arr` is unchanged and knows nothing of its cells.
+* A piece of an arena is lent as a `barr` by `barr_of_arrx`, which takes
+  any `arrx(byte, l, n, o)` and gives the `barr` with the cells nothing is
+  known of (as `barr_of_arr` does) and a proof `arrx_lent(l, n, o)`, a
+  linear view (erased at run time, `unit_v` in the trusted block) made
+  only there. `barr_to_arrx` takes the `barr` and that proof and gives the
+  `arrx(byte, l, n, o)` back, so the owner is kept by type: the arena's
+  count of outstanding pieces does not change while a piece is lent (so
+  `arena_destroy`, which needs `k = 0`, does not type-check), the piece
+  comes back only as the same `l`, `n` and `o` (so only to its own arena),
+  and a lent piece cannot be freed (`barr_free` leaves the proof
+  unconsumed) or the `barr` used after it is given back. Both are casts of
+  the pointer in the trusted block, like `barr_of_arr` and `barr_to_arr`,
+  and add no `praxi`, `assume` outside that block or `$UNSAFE`. A barr may
+  be frozen, read through `cborrow_get` and thawed between the two, which
+  is how a loop proves what it read from an arena piece
+  (`tests/dynamic/arena-lend`; `tests/static/reject/arena-lend-*`).
 * A proof about a `barr` holds only while the program holds it: `barr_to_arr`
-  forgets the cells, and `barr_of_arr` starts again from cells nothing is
-  known of.
+  and `barr_to_arrx` forget the cells, and `barr_of_arr` and `barr_of_arrx`
+  start again from cells nothing is known of.
 
 ## CI is pinned
 

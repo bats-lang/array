@@ -1,0 +1,1 @@
+arena-lend-use-after-give-back.bats: 499(line=12, offs=33) -- 500(line=12, offs=34): error(3): the linear dynamic variable [b$

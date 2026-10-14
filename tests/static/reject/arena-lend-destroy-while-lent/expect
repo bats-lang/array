@@ -1,0 +1,1 @@
+arena-lend-destroy-while-lent.bats: 519(line=9, offs=35) -- 521(line=9, offs=37): error(3): unsolved constraint: C3NSTRprop(C3TKmain(); S2Eeqeq(S2Eintinf(1); S2Eintinf(0)))
