@@ -1,1 +1,3 @@
-alloc<S2Ecst(string_type)>
+function main0
+line 5
+template 'alloc' has no implementation for the instance alloc<S2Ecst(string_type)>; implement it for that type where the instance can see it
