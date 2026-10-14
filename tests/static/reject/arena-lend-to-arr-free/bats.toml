@@ -1,0 +1,6 @@
+[package]
+name = "arena-lend-to-arr-free"
+kind = "bin"
+
+[dependencies]
+"array" = ""

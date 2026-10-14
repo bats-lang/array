@@ -1,0 +1,6 @@
+[package]
+name = "reject/arena-lend-destroy-while-lent"
+kind = "bin"
+
+[dependencies]
+"array" = ""

@@ -1,0 +1,3 @@
+function main0
+line 8
+the linear dynamic variable [lent$4908(-1)] needs to be consumed but it is preserved with the type [S2Eapp(S2Ecst(arrx_lent); S2Evar(l$9393$9394$9395(15624)), S2Eintinf(10), S2Evar(l$3905(9596)))] instead.
