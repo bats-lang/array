@@ -2,11 +2,9 @@
 #use array as A
 
 
-(* The array cannot be thawed (and so set) while a borrow of it is out. *)
-implement main0 () = let
-  val (len | a) = $A.barr_alloc(4)
-  val (f, b) = $A.barr_freeze(a)
-  val a = $A.barr_thaw(f)
-  val () = $A.barr_free(a)
-  val () = $A.cborrow_drop(f, b)
-in () end
+(* The array cannot be thawed (and so set) while a borrow of it is out:
+   one borrow is out of this frozen array. *)
+fn thaw_one_out {l:agz}{cs:$A.cells} (f: $A.cfrozen(l, 4, 1, cs)): $A.barr(l, 4, cs) =
+  $A.barr_thaw(f)
+
+implement main0 () = ()
