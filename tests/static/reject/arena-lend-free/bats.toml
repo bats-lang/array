@@ -1,0 +1,6 @@
+[package]
+name = "reject/arena-lend-free"
+kind = "bin"
+
+[dependencies]
+"array" = ""

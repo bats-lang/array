@@ -429,6 +429,23 @@ primplement nth_functional {cs}{i}{v,w} (p, q) = _nth_functional(p, q)
 (* The array without its cells, to be written by what knows nothing of them *)
 #pub fun barr_to_arr {l:agz}{n:nat}{cs:cells} (a: barr(l, n, cs)): arr(byte, l, n)
 
+(* A piece of an arena (or any arrx) lent as a barr. The lend keeps the
+   owner: barr_of_arrx consumes the piece and gives the barr and the proof
+   arrx_lent(l, n, o) that the memory at l belongs to o; the proof is a
+   linear view, made only here and consumed only by barr_to_arrx, which
+   takes the barr back and gives the piece of o again. While it is lent the
+   piece has not been returned (the arena's count k is unchanged, so
+   arena_destroy cannot be called), and the proof is of this l and n, so
+   the piece cannot be given back as another, or to another owner. The
+   cells are as for barr_of_arr: nothing is known of them. *)
+#pub absview arrx_lent(l:addr, n:int, o:addr)
+
+#pub fun barr_of_arrx {l:agz}{n:nat}{o:addr} (a: arrx(byte, l, n, o))
+  : [cs:cells] (CLEN(cs, n), arrx_lent(l, n, o) | barr(l, n, cs))
+
+#pub fun barr_to_arrx {l:agz}{n:nat}{o:addr}{cs:cells} (pf: arrx_lent(l, n, o) | a: barr(l, n, cs))
+  : arrx(byte, l, n, o)
+
 (* Another array holding the same cells *)
 #pub fun barr_copy {l:agz}{n:pos}{cs:cells} (a: !barr(l, n, cs), n: int n): [m:agz] barr(m, n, cs)
 
@@ -536,6 +553,7 @@ $UNSAFE begin
   assume borrow(a, l, n) = ptr l
   assume cfrozen(l, n, k, cs) = ptr l
   assume cborrow(l, n, cs) = ptr l
+  assume arrx_lent(l, n, o) = unit_v
   assume text(n) = ptr
   assume text_builder(n, i) = ptr
 end
@@ -593,6 +611,15 @@ implement barr_of_arr {l}{n} (a) =
 
 implement barr_to_arr {l}{n}{cs} (a) =
   $UNSAFE begin $UNSAFE.castvwtp0{arr(byte, l, n)}(a) end
+
+implement barr_of_arrx {l}{n}{o} (a) =
+  $UNSAFE begin $UNSAFE.castvwtp0{[cs:cells] (CLEN(cs, n), arrx_lent(l, n, o) | barr(l, n, cs))}(a) end
+
+implement barr_to_arrx {l}{n}{o}{cs} (pf | a) = let
+  prval unit_v() = pf
+in
+  $UNSAFE begin $UNSAFE.castvwtp0{arrx(byte, l, n, o)}(a) end
+end
 
 implement barr_copy {l}{n}{cs} (a, n) = let
   val copy = $UNSAFE begin _calloc(n, sizeof<byte>) end
