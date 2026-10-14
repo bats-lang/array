@@ -1,1 +1,3 @@
-unsolved constraint
+function main0
+line 9
+unsolved constraint: C3NSTRprop(C3TKmain(); S2Eeqeq(S2Evar(l$3885(9554)); S2Ecst(null_addr)))
