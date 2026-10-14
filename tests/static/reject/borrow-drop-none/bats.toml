@@ -1,0 +1,6 @@
+[package]
+name = "borrow-drop-none"
+kind = "bin"
+
+[dependencies]
+"array" = ""
