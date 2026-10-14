@@ -57,13 +57,23 @@ bound.
 * The lemmas are proved here, by the compiler, with no `praxi` and no
   `assume`: `setc_len`, `setc_nth_same`, `setc_nth_other` (the other cells
   are as they were; needs `i != j`), `nth_in_len` and `nth_functional`.
-* The trusted core is the six primitives in the implementation block of
+* The trusted core is the primitives in the implementation block of
   `lib.bats`: each does what its type says to the memory (reads or writes
   one byte, copies, allocates) and fabricates the proof its type gives.
   Nothing else in the package or in a package using it makes a proof of
   an array's contents. `tests/dynamic/content` runs them; `tests/static`
   rejects a cell claimed to hold another value, a cell past the end, and
   the lemma about other cells used for the same cell.
+* A `barr` is borrowed with its cells in the type (`barr_freeze` gives a
+  `cfrozen(l, n, 1, cs)` and a `cborrow(l, n, cs)`; `cborrow_dup`,
+  `cborrow_drop` and `barr_thaw` count the borrows as `freeze` and `thaw`
+  do for `arr`, so no cell is set while one is out). `cborrow_get` gives
+  the cell with `NTH(cs, i, v)`, exactly as `barr_get` does, so a loop
+  that reads a borrowed array (a table, an input) can state what the bytes
+  it read are. These five are identities on the pointer or one byte read,
+  in the same trusted block, tested by `tests/dynamic/borrow` and
+  rejected when misused by `tests/static/reject/borrow-*`. The plain
+  `borrow` of `arr` is unchanged and knows nothing of its cells.
 * A proof about a `barr` holds only while the program holds it: `barr_to_arr`
   forgets the cells, and `barr_of_arr` starts again from cells nothing is
   known of.

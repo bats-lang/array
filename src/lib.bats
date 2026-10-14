@@ -433,6 +433,35 @@ primplement nth_functional {cs}{i}{v,w} (p, q) = _nth_functional(p, q)
 #pub fun barr_copy {l:agz}{n:pos}{cs:cells} (a: !barr(l, n, cs), n: int n): [m:agz] barr(m, n, cs)
 
 (* ============================================================
+   Borrowing an array whose cells are known
+   ============================================================ *)
+
+(* The freeze / thaw / borrow protocol of arrx and borrow above, for a
+   barr: the borrow is indexed by the same cells, so a read through it
+   gives NTH(cs, i, v) as barr_get does, and thawing gives back the barr
+   with those very cells. k borrows are out; barr_thaw needs k = 0, so
+   no cell is set while a borrow is out. *)
+#pub absvtype cfrozen(l:addr, n:int, k:int, cs:cells) = ptr
+
+#pub absvtype cborrow(l:addr, n:int, cs:cells) = ptr
+
+#pub fun barr_freeze {l:agz}{n:nat}{cs:cells} (a: barr(l, n, cs))
+  : @(cfrozen(l, n, 1, cs), cborrow(l, n, cs))
+
+#pub fun barr_thaw {l:agz}{n:nat}{cs:cells} (f: cfrozen(l, n, 0, cs)): barr(l, n, cs)
+
+#pub fun cborrow_dup {l:agz}{n:nat}{cs:cells}{k:pos}
+  (f: !cfrozen(l, n, k, cs) >> cfrozen(l, n, k+1, cs), b: !cborrow(l, n, cs))
+  : cborrow(l, n, cs)
+
+#pub fun cborrow_drop {l:agz}{n:nat}{cs:cells}{k:pos}
+  (f: !cfrozen(l, n, k, cs) >> cfrozen(l, n, k-1, cs), b: cborrow(l, n, cs)): void
+
+(* Cell i, with the proof that it is cell i of the cells *)
+#pub fun cborrow_get {l:agz}{n,i:nat | i < n}{cs:cells} (b: !cborrow(l, n, cs), i: int i)
+  : [v:int | 0 <= v; v < 256] (NTH(cs, i, v) | int v)
+
+(* ============================================================
    C runtime helpers
    ============================================================ *)
 
@@ -505,6 +534,8 @@ $UNSAFE begin
   assume frozenx(a, l, n, k, o) = ptr l
   assume arena(a, l, max, used, k) = ptr l
   assume borrow(a, l, n) = ptr l
+  assume cfrozen(l, n, k, cs) = ptr l
+  assume cborrow(l, n, cs) = ptr l
   assume text(n) = ptr
   assume text_builder(n, i) = ptr
 end
@@ -576,6 +607,19 @@ implement barr_copy {l}{n}{cs} (a, n) = let
 in
   $UNSAFE begin $UNSAFE.castvwtp0{[m:agz] barr(m, n, cs)}(copy) end
 end
+
+implement barr_freeze {l}{n}{cs} (a) = @(a, a)
+
+implement barr_thaw {l}{n}{cs} (f) = f
+
+implement cborrow_dup {l}{n}{cs}{k} (f, b) = b
+
+implement cborrow_drop {l}{n}{cs}{k} (f, b) = ()
+
+implement cborrow_get {l}{n,i}{cs} (b, i) =
+  $UNSAFE begin
+    $UNSAFE.cast{[v:int | 0 <= v; v < 256] (NTH(cs, i, v) | int v)}(byte2int0($UNSAFE.ptr0_get<byte>(ptr_add<byte>(b, i))))
+  end
 
 (* -- Element access -- *)
 
