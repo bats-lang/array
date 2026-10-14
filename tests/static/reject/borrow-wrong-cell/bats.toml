@@ -1,0 +1,6 @@
+[package]
+name = "borrow-wrong-cell"
+kind = "bin"
+
+[dependencies]
+"array" = ""

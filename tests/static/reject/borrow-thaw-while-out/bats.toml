@@ -1,0 +1,6 @@
+[package]
+name = "borrow-thaw-while-out"
+kind = "bin"
+
+[dependencies]
+"array" = ""
