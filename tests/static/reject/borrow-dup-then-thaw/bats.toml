@@ -1,0 +1,6 @@
+[package]
+name = "borrow-dup-then-thaw"
+kind = "bin"
+
+[dependencies]
+"array" = ""
