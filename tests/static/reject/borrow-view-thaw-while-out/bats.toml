@@ -1,0 +1,6 @@
+[package]
+name = "borrow-view-thaw-while-out"
+kind = "bin"
+
+[dependencies]
+"array" = ""

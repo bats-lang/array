@@ -98,6 +98,27 @@ bound.
   be frozen, read through `cborrow_get` and thawed between the two, which
   is how a loop proves what it read from an arena piece
   (`tests/dynamic/arena-lend`; `tests/static/reject/arena-lend-*`).
+* `cborrow_view(f, b)` gives the plain `borrow(byte, l, n)` of the same
+  array while `b` is still held (quire#568: a reader that takes a plain
+  borrow, like `read` or `write_borrow`, and a proof of the cells through
+  `cborrow_get`, at once). It is one more borrow out, counted exactly as
+  `cborrow_dup` counts one (`cfrozen(l, n, k, cs)` to `k+1`), and
+  `cborrow_view_drop(f, view)` takes it back (`k` to `k-1`); `barr_thaw`
+  needs `k = 0`, so no cell is set while the view is out. Both are
+  identities on the pointer, in the same trusted block as `cborrow_dup`
+  and `cborrow_drop`, and assume only that the plain `borrow` is a
+  read-only handle: every operation on a plain `borrow` here reads (`read`,
+  `write_borrow` reads its source, `borrow_split`, `borrow_join` and
+  `borrow_at` need a `frozenx` of an `arr`, which a `barr` never is, so a
+  view cannot be split or joined, and `drop` needs a `frozenx` too, so the
+  view goes back only through `cborrow_view_drop`). The view is indexed by
+  `l` and `n` only: what is read through it is not known (the proof is
+  `cborrow_get`'s on `b`), and `cborrow_view_drop` takes the `cfrozen` of
+  the same `l`, so the view of one array cannot be given back to another's
+  count. `tests/dynamic/borrow-view` reads both ways and compares;
+  `tests/static/accept/borrow-view` and `reject/borrow-view-*` (thaw with
+  the view out, view used after it was given back, given back twice, given
+  back to another array) pin the types.
 * A proof about a `barr` holds only while the program holds it: `barr_to_arr`
   and `barr_to_arrx` forget the cells, and `barr_of_arr` and `barr_of_arrx`
   start again from cells nothing is known of.

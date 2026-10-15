@@ -1,0 +1,7 @@
+function main0
+line 10
+the linear dynamic variable [view$4913(-1)] is no longer available.
+the dynamic expression cannot be assigned the type [S2Eapp(S2Ecst(borrow); S2Ecst(byte_t0ype), S2Evar(l$9402$9404(15649)), S2Eintinf(4))].
+mismatch of static terms (tyleq):
+The actual term is: S2Eerrexp()
+The needed term is: S2Eapp(S2Ecst(borrow); S2Ecst(byte_t0ype), S2Evar(l$9402$9404(15649)), S2Eintinf(4))
