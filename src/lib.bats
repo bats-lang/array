@@ -474,6 +474,19 @@ primplement nth_functional {cs}{i}{v,w} (p, q) = _nth_functional(p, q)
 #pub fun cborrow_drop {l:agz}{n:nat}{cs:cells}{k:pos}
   (f: !cfrozen(l, n, k, cs) >> cfrozen(l, n, k-1, cs), b: cborrow(l, n, cs)): void
 
+(* The same bytes as a plain borrow(byte, l, n), for what reads through
+   that type (read, write_borrow, ...), counted like a cborrow: it is one
+   more borrow out, so barr_thaw (k = 0) is refused until the view is
+   given back to cborrow_view_drop. Both borrows are held at once and no
+   cell is settable meanwhile. The view is indexed by l and n only, so what
+   is read through it is not known (use cborrow_get for the cells' proof). *)
+#pub fun cborrow_view {l:agz}{n:nat}{cs:cells}{k:pos}
+  (f: !cfrozen(l, n, k, cs) >> cfrozen(l, n, k+1, cs), b: !cborrow(l, n, cs))
+  : borrow(byte, l, n)
+
+#pub fun cborrow_view_drop {l:agz}{n:nat}{cs:cells}{k:pos}
+  (f: !cfrozen(l, n, k, cs) >> cfrozen(l, n, k-1, cs), b: borrow(byte, l, n)): void
+
 (* Cell i, with the proof that it is cell i of the cells *)
 #pub fun cborrow_get {l:agz}{n,i:nat | i < n}{cs:cells} (b: !cborrow(l, n, cs), i: int i)
   : [v:int | 0 <= v; v < 256] (NTH(cs, i, v) | int v)
@@ -642,6 +655,10 @@ implement barr_thaw {l}{n}{cs} (f) = f
 implement cborrow_dup {l}{n}{cs}{k} (f, b) = b
 
 implement cborrow_drop {l}{n}{cs}{k} (f, b) = ()
+
+implement cborrow_view {l}{n}{cs}{k} (f, b) = b
+
+implement cborrow_view_drop {l}{n}{cs}{k} (f, b) = ()
 
 implement cborrow_get {l}{n,i}{cs} (b, i) =
   $UNSAFE begin

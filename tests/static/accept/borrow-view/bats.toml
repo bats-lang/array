@@ -1,0 +1,6 @@
+[package]
+name = "borrow-view"
+kind = "bin"
+
+[dependencies]
+"array" = ""
