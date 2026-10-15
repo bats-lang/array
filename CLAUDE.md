@@ -40,7 +40,8 @@ not delete the facility.
 
 `tests/static` rejects each misuse (overfill, freeing a piece, returning
 it to another arena, destroying with a piece out, a pointer element
-type); `tests/dynamic/arena` exercises pieces past the 1 MiB `alloc`
+type); a piece lent as a `barr` and given back is below, under byte
+arrays; `tests/dynamic/arena` exercises pieces past the 1 MiB `alloc`
 bound.
 
 ## Byte arrays know their contents
@@ -74,9 +75,53 @@ bound.
   in the same trusted block, tested by `tests/dynamic/borrow` and
   rejected when misused by `tests/static/reject/borrow-*`. The plain
   `borrow` of `arr` is unchanged and knows nothing of its cells.
+* A piece of an arena is lent as a `barr` by `barr_of_arrx`, which takes
+  any `arrx(byte, l, n, o)` and gives the `barr` with the cells nothing is
+  known of (as `barr_of_arr` does) and a proof `arrx_lent(l, n, o)`, a
+  linear view (erased at run time, `unit_v` in the trusted block) made
+  only there. `barr_to_arrx` takes the `barr` and that proof and gives the
+  `arrx(byte, l, n, o)` back, so the owner is kept by type: the arena's
+  count of outstanding pieces does not change while a piece is lent (so
+  `arena_destroy`, which needs `k = 0`, does not type-check), the piece
+  comes back only as the same `l`, `n` and `o` (so only to its own arena),
+  and a lent piece cannot be freed (`barr_free` leaves the proof
+  unconsumed) or the `barr` used after it is given back. Both are casts of
+  the pointer in the trusted block, like `barr_of_arr` and `barr_to_arr`,
+  and add no `praxi`, `assume` outside that block or `$UNSAFE`. What they
+  assume: that `barr` and `arrx(byte, ...)` are both the pointer to the
+  n bytes (as `barr_of_arr` and `barr_to_arr` already do), and that
+  `arrx_lent` is `unit_v`, a view with no run-time content. `barr_to_arr`
+  on a lent barr gives an `arr` that `free` takes, but the lend is then
+  still unconsumed and no barr at that address is left to consume it, so
+  the program does not type-check
+  (`tests/static/reject/arena-lend-to-arr-free`). A barr may
+  be frozen, read through `cborrow_get` and thawed between the two, which
+  is how a loop proves what it read from an arena piece
+  (`tests/dynamic/arena-lend`; `tests/static/reject/arena-lend-*`).
+* `cborrow_view(f, b)` gives the plain `borrow(byte, l, n)` of the same
+  array while `b` is still held (quire#568: a reader that takes a plain
+  borrow, like `read` or `write_borrow`, and a proof of the cells through
+  `cborrow_get`, at once). It is one more borrow out, counted exactly as
+  `cborrow_dup` counts one (`cfrozen(l, n, k, cs)` to `k+1`), and
+  `cborrow_view_drop(f, view)` takes it back (`k` to `k-1`); `barr_thaw`
+  needs `k = 0`, so no cell is set while the view is out. Both are
+  identities on the pointer, in the same trusted block as `cborrow_dup`
+  and `cborrow_drop`, and assume only that the plain `borrow` is a
+  read-only handle: every operation on a plain `borrow` here reads (`read`,
+  `write_borrow` reads its source, `borrow_split`, `borrow_join` and
+  `borrow_at` need a `frozenx` of an `arr`, which a `barr` never is, so a
+  view cannot be split or joined, and `drop` needs a `frozenx` too, so the
+  view goes back only through `cborrow_view_drop`). The view is indexed by
+  `l` and `n` only: what is read through it is not known (the proof is
+  `cborrow_get`'s on `b`), and `cborrow_view_drop` takes the `cfrozen` of
+  the same `l`, so the view of one array cannot be given back to another's
+  count. `tests/dynamic/borrow-view` reads both ways and compares;
+  `tests/static/accept/borrow-view` and `reject/borrow-view-*` (thaw with
+  the view out, view used after it was given back, given back twice, given
+  back to another array) pin the types.
 * A proof about a `barr` holds only while the program holds it: `barr_to_arr`
-  forgets the cells, and `barr_of_arr` starts again from cells nothing is
-  known of.
+  and `barr_to_arrx` forget the cells, and `barr_of_arr` and `barr_of_arrx`
+  start again from cells nothing is known of.
 
 ## CI is pinned
 

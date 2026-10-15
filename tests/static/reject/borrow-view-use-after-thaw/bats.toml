@@ -1,0 +1,6 @@
+[package]
+name = "borrow-view-use-after-thaw"
+kind = "bin"
+
+[dependencies]
+"array" = ""

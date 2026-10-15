@@ -1,1 +1,4 @@
-unsolved constraint
+function drop_none
+line 9
+unsolved constraint: C3NSTRprop(C3TKmain(); S2Eapp(S2Ecst(>); S2EVar(5468->S2Eintinf(0)), S2Eintinf(0)))
+unsolved constraint for var preservation

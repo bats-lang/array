@@ -1,0 +1,6 @@
+[package]
+name = "borrow-view-drop-twice"
+kind = "bin"
+
+[dependencies]
+"array" = ""

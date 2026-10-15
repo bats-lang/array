@@ -1,1 +1,9 @@
-is no longer available
+function main0
+line 11
+the linear dynamic variable [b$4905(-1)] is no longer available.
+the dynamic expression cannot be assigned the type [S2Eapp(S2Ecst(cborrow); S2EVar(5473), S2EVar(5474), S2EVar(5476))].
+mismatch of static terms (tyleq):
+The actual term is: S2Eerrexp()
+The needed term is: S2Eapp(S2Ecst(cborrow); S2EVar(5473), S2EVar(5474), S2EVar(5476))
+line 7
+the linear dynamic variable [b$4905(-1)] needs to be consumed but it is preserved with the type [S2Eapp(S2Ecst(cborrow); S2EVar(5473), S2EVar(5474), S2EVar(5476))] instead.
