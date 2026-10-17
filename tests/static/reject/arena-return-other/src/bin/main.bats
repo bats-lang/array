@@ -3,8 +3,8 @@
 
 (* A piece goes back only to the arena it came from. *)
 implement main0 () =
-  case+ $A.arena_create<byte>(16) of
-  | ~$A.arena_some(a1) => (case+ $A.arena_create<byte>(16) of
+  case+ $A.arena_create<byte>($A.Arena64KiB() | 65536) of
+  | ~$A.arena_some(a1) => (case+ $A.arena_create<byte>($A.Arena64KiB() | 65536) of
     | ~$A.arena_some(a2) => let
         val p = $A.arena_alloc<byte>(a1, 10)
         val q = $A.arena_alloc<byte>(a2, 10)

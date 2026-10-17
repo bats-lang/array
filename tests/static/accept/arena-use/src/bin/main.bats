@@ -1,10 +1,10 @@
 #include "share/atspre_staload.hats"
 #use array as A
 
-(* Two pieces of 1 MiB each from a 2 MiB arena: read, write, freeze,
+(* Two pieces of 1 MiB each from a 4 MiB arena: read, write, freeze,
    return, destroy. *)
 implement main0 () =
-  case+ $A.arena_create<byte>(2097152) of
+  case+ $A.arena_create<byte>($A.Arena4MiB() | 4194304) of
   | ~$A.arena_some(ar) => let
       val p = $A.arena_alloc<byte>(ar, 1048576)
       val q = $A.arena_alloc<byte>(ar, 1048576)
