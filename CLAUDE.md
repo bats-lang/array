@@ -57,13 +57,16 @@ bound.
   write it, and `barr_copy` gives another array of the same cells.
 * `barr_get_be32(a, i)` (sha256#40) gives cells i to i + 3 as the four bytes
   of a big-endian word with the four proofs `NTH(cs, i + k, b_k)`, in one
-  call. It could be written from four `barr_get`, but a wrapper over them
-  costs the four calls and one more; it is in the trusted block only for
-  that, as one read of four bytes with the proofs of four reads. Measured
-  (sha256's proved `hash` of 1 MiB, release, callgrind, 468.6 instructions a
-  byte with four `barr_get` for each word read, 410.2 with one
-  `barr_get_be32`): `barr_get` was 11.9% of the run. `barr_set` is 5.5% (26
-  instructions a byte), too little to show a matching write is needed: none.
+  call. It is an ordinary function over four `barr_get` (explicit static
+  arguments, no `$UNSAFE`), not in the trusted block: the trusted block holds
+  only what cannot be written from `barr_get`. It exists so a caller in
+  another module makes one cross-module call instead of four; here the C
+  compiler inlines the four reads into four loads. Measured (sha256's proved
+  `hash` of 1 MiB, release, callgrind, instructions in the PR on #58): four
+  `barr_get` for each word read 468.6 a byte, `barr_get_be32` as a wrapper
+  430,074,613 instructions in total (410.2 a byte), the same as the trusted
+  primitive (430,075,276). `barr_set` is 5.5% (26 instructions a byte), too little
+  to show a matching write is needed: none.
 * The lemmas are proved here, by the compiler, with no `praxi` and no
   `assume`: `setc_len`, `setc_nth_same`, `setc_nth_other` (the other cells
   are as they were; needs `i != j`), `nth_in_len` and `nth_functional`.
