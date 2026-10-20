@@ -1,0 +1,6 @@
+[package]
+name = "be32-wrong-value"
+kind = "bin"
+
+[dependencies]
+"array" = ""
