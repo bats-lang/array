@@ -1,0 +1,6 @@
+[package]
+name = "be32-wrong-cell"
+kind = "bin"
+
+[dependencies]
+"array" = ""

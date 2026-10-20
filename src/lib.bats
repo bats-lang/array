@@ -418,6 +418,12 @@ primplement nth_functional {cs}{i}{v,w} (p, q) = _nth_functional(p, q)
 #pub fun barr_get {l:agz}{n,i:nat | i < n}{cs:cells} (a: !barr(l, n, cs), i: int i)
   : [v:int | 0 <= v; v < 256] (NTH(cs, i, v) | int v)
 
+(* Cells i to i + 3, the bytes of a big-endian word most significant first, with the proof of each *)
+#pub fun barr_get_be32 {l:agz}{n,i:nat | i + 3 < n}{cs:cells} (a: !barr(l, n, cs), i: int i)
+  : [b0,b1,b2,b3:int | 0 <= b0; b0 < 256; 0 <= b1; b1 < 256; 0 <= b2; b2 < 256; 0 <= b3; b3 < 256]
+    (NTH(cs, i, b0), NTH(cs, i + 1, b1), NTH(cs, i + 2, b2), NTH(cs, i + 3, b3)
+    | @(int b0, int b1, int b2, int b3))
+
 (* Cell i set to v: the cells that are left, with the proof that they are *)
 #pub fun barr_set {l:agz}{n,i:nat | i < n}{cs:cells}{v:int | 0 <= v; v < 256} (a: barr(l, n, cs), i: int i, v: int v)
   : [cs2:cells] (SETC(cs, i, v, cs2) | barr(l, n, cs2))
@@ -611,6 +617,17 @@ implement barr_free {l}{n}{cs} (a) =
 implement barr_get {l}{n,i}{cs} (a, i) =
   $UNSAFE begin
     $UNSAFE.cast{[v:int | 0 <= v; v < 256] (NTH(cs, i, v) | int v)}(byte2int0($UNSAFE.ptr0_get<byte>(ptr_add<byte>(a, i))))
+  end
+
+implement barr_get_be32 {l}{n,i}{cs} (a, i) =
+  $UNSAFE begin
+    $UNSAFE.cast{[b0,b1,b2,b3:int | 0 <= b0; b0 < 256; 0 <= b1; b1 < 256; 0 <= b2; b2 < 256; 0 <= b3; b3 < 256]
+      (NTH(cs, i, b0), NTH(cs, i + 1, b1), NTH(cs, i + 2, b2), NTH(cs, i + 3, b3)
+      | @(int b0, int b1, int b2, int b3))}(
+      @(byte2int0($UNSAFE.ptr0_get<byte>(ptr_add<byte>(a, i))),
+        byte2int0($UNSAFE.ptr0_get<byte>(ptr_add<byte>(a, i + 1))),
+        byte2int0($UNSAFE.ptr0_get<byte>(ptr_add<byte>(a, i + 2))),
+        byte2int0($UNSAFE.ptr0_get<byte>(ptr_add<byte>(a, i + 3)))))
   end
 
 implement barr_set {l}{n,i}{cs}{v} (a, i, v) = let
