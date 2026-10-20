@@ -277,8 +277,8 @@ drop_borrow_at
    Arena -- one large region, handed out in pieces
    ============================================================ *)
 
-(* alloc takes at most 1048576 elements, to limit fragmentation (see
-   CLAUDE.md). Code that needs more takes pieces of an arena: a region
+(* alloc takes at most 1048576 elements, a bound kept on purpose to limit
+   fragmentation (allocation size). Code that needs more takes pieces of an arena: a region
    of max elements of a, of which used are handed out, with k pieces
    outstanding. A piece is an arrx owned by the arena (o = la): it reads
    and writes like any array, free does not take it, and only
