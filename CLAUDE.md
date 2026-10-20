@@ -137,6 +137,26 @@ bound.
   and `barr_to_arrx` forget the cells, and `barr_of_arr` and `barr_of_arrx`
   start again from cells nothing is known of.
 
+## The accessors as templates (bats-lang/sha256#59)
+
+`barr_get`, `barr_get_be32` and `barr_set` are external symbols: a dependent
+calls them and the C compiler, which compiles each module alone, cannot inline
+them (in the proved SHA-256: `barr_get_be32` 44, `barr_set` 26 of 394
+instructions a byte, callgrind, release, 1 MiB). A template with no template
+arguments is instantiated by the dependent, in its own translation unit (a
+dependent loads this package's `lib.dats`), so the three are also
+`barr_get_inline`, `barr_get_be32_inline` and `barr_set_inline` (`#pub fun{}`),
+with the very types of the three, called as `barr_get_inline(a, i)`. Their bodies
+are the trusted primitives' (`barr_get`'s and `barr_set`'s casts, in the
+implementation block) and `barr_get_be32`'s four reads; `barr_get`, `barr_get_be32`
+and `barr_set` are now one call of the template, so each body is written once,
+and the old names stay (additive API). Nothing new is trusted.
+`tests/dynamic/content_inline` is `content` on the template names, and
+`tests/static/reject/*-inline-*` repeat the rejects of the accessors (a cell past
+the end, a cell claimed to hold another value, the lemma about other cells used
+for the same cell, and the four cells of `barr_get_be32` past the end, of the
+wrong cell and of the wrong value) with `accept/content-inline-use`.
+
 ## CI is pinned
 
 Every input to CI is pinned in the source (bats-lang/repository-prototype#269),
