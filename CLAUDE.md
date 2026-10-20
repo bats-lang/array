@@ -1,5 +1,9 @@
 # array
 
+## Comments name their area by keyword
+
+A comment states its reason in one line and names the area by keyword; the detail lives in this file: search it for the keyword before changing the code.
+
 ## Allocation size is bounded on purpose
 
 `alloc` takes at most 1048576 elements (`{n:pos | n <= 1048576}`). This is a
