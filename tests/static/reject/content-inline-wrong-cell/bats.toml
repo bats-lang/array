@@ -1,0 +1,6 @@
+[package]
+name = "content-inline-wrong-cell"
+kind = "bin"
+
+[dependencies]
+"array" = ""

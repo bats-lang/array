@@ -1,0 +1,6 @@
+[package]
+name = "content-inline-past-end"
+kind = "bin"
+
+[dependencies]
+"array" = ""

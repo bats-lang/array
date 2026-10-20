@@ -1,0 +1,6 @@
+[package]
+name = "be32-inline-past-end"
+kind = "bin"
+
+[dependencies]
+"array" = ""
