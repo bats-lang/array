@@ -157,6 +157,17 @@ the end, a cell claimed to hold another value, the lemma about other cells used
 for the same cell, and the four cells of `barr_get_be32` past the end, of the
 wrong cell and of the wrong value) with `accept/content-inline-use`.
 
+**Override exposure (the review of array#63, sha256#59).** A template body is
+compiled into each translation unit that instantiates it, so a package in the
+dependency graph that implements the same template (`implement{} $A.barr_get_inline
+...` in a dependent) replaces it at its own call sites, silently. The external
+names are protected by the linker (a second `barr_get` is a link error); the
+templates are not. A safe package that depends on an unsafe one carrying such an
+override gets its body too. Writing such a body needs an unsafe package, since it
+casts. The templates are not new trusted primitives (the owner's ruling). The
+exposure is tracked by bats-lang/bats#421, which rejects an `implement` of a
+template or function that another package declares.
+
 ## CI is pinned
 
 Every input to CI is pinned in the source (bats-lang/repository-prototype#269),

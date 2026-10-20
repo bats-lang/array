@@ -1,0 +1,6 @@
+[package]
+name = "content-inline-set-wrong-value"
+kind = "bin"
+
+[dependencies]
+"array" = ""
