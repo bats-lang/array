@@ -6,7 +6,7 @@
    no barr at that address is left to give it back with: the proof is left
    unconsumed. *)
 implement main0 () =
-  case+ $A.arena_create<byte>(16) of
+  case+ $A.arena_create<byte>($A.Arena64KiB() | 65536) of
   | ~$A.arena_some(ar) => let
       val p = $A.arena_alloc<byte>(ar, 10)
       val (len, lent | b) = $A.barr_of_arrx(p)
