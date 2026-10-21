@@ -17,8 +17,9 @@ pieces whose sizes the types account for, and released as a whole.
 
 ## The arena is the pool
 
-`arena_create<a>(class | max)` reserves one zeroed region of `max`
-elements, `max` one of the size classes; `arena_alloc` hands out pieces of it, `arena_return` takes them
+`arena_create_class<a>(class | max)` reserves one zeroed region of `max`
+elements, `max` one of the size classes (the deprecated `arena_create<a>(max)`
+takes any `max` up to 268435456: next section); `arena_alloc` hands out pieces of it, `arena_return` takes them
 back, and `arena_destroy` releases the region. It is sound by type, with
 no runtime checks:
 
@@ -32,10 +33,33 @@ no runtime checks:
 * The arena counts outstanding pieces (`k`); `arena_destroy` needs
   `k = 0`.
 * Pieces are never reused, so they are zero bytes; as with `alloc`,
-  `arena_create` has instances only for element types where zero bytes
+  `arena_create_class` and `arena_create` have instances only for element types where zero bytes
   are a valid value.
-* When the region cannot be had, `arena_create` returns `arena_none`,
+* When the region cannot be had, `arena_create_class` (and `arena_create`) returns `arena_none`,
   never a null arena.
+
+## Two ways to make an arena, one deprecated (array#29, array#67)
+
+Both return the same `arena_made(a, max)` and the same `arena`, so everything
+after the creation is the same:
+
+* `arena_create_class<a>(class | max)` is the form callers move to: its size
+  is one of the classes (next section).
+* `arena_create<a>(max)` is **deprecated**: it takes any `max` with
+  `0 < max <= 268435456`, as it always did, and is kept only so that no
+  dependent breaks. Array#29 first replaced it in place by the class form; an
+  in-place replacement fails every dependent and the package repository's
+  `verify` (the same lesson as process's "Spawn keeps its old signatures",
+  process#62 restored by process#64). The owner's ruling, 2026-10-21: "Just....keep
+  supporting both, have a p1 ticket to remove the deprecated version." That
+  ticket is array#67, which removes `arena_create` once every dependent has
+  moved. Nothing in this package calls it except its own tests.
+
+`tests/static/accept/arena-create-deprecated` accepts the deprecated form
+with a size that is no class, and `tests/dynamic/arena-create-deprecated`
+calls it for each element type it has (byte, char, bool, int, uint, Int), so
+an edit cannot drop it without a failing test. The tests that call it are
+removed with it (array#67).
 
 ## An arena's size is a class
 
@@ -55,7 +79,7 @@ block only for a request between half its size and its full size, so
 odd-sized arenas pile up there today. Which classes #241 uses is decided
 there; nothing in this package depends on it.
 
-`arena_create` takes a proof `ARENA_CLASS(max)`, whose constructors are
+`arena_create_class` takes a proof `ARENA_CLASS(max)`, whose constructors are
 each indexed by a literal, so a size computed at run time, or a constant
 that is not a class, does not type-check. `arena_class_of(n)` gives the
 smallest class that holds `n` elements, or `arena_too_large` over
@@ -74,8 +98,8 @@ The first arena (removed in #21 and restored here) had none of these:
 freed, and it handed out zero bytes as any type. Fix such problems; do
 not delete the facility.
 
-`tests/static` rejects each misuse (a size that is not a class, a size
-computed at run time, a size of 0 or a negative one given to
+`tests/static` rejects each misuse (a size that is not a class given to
+`arena_create_class`, a size computed at run time, a size of 0 or a negative one given to
 `arena_class_of`, overfill, freeing a piece, returning
 it to another arena, destroying with a piece out, a pointer element
 type); a piece lent as a `barr` and given back is below, under byte

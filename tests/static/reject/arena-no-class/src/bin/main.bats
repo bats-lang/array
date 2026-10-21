@@ -3,6 +3,6 @@
 
 (* A size with no class's proof is not taken. *)
 implement main0 () =
-  case+ $A.arena_create<byte>(65536) of
+  case+ $A.arena_create_class<byte>(65536) of
   | ~$A.arena_some(ar) => $A.arena_destroy<byte>(ar)
   | ~$A.arena_none() => ()

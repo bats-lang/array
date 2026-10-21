@@ -6,7 +6,7 @@
 fn hold {n:pos} (n: int n): void =
   case+ $A.arena_class_of(n) of
   | ~$A.arena_fits(class | max) =>
-    (case+ $A.arena_create<byte>(class | max) of
+    (case+ $A.arena_create_class<byte>(class | max) of
      | ~$A.arena_some(ar) => let
          val p = $A.arena_alloc<byte>(ar, n)
          val () = $A.arena_return<byte>(ar, p)

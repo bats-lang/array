@@ -5,7 +5,7 @@
 fn hold (): void =
   case+ $A.arena_class_of(~1) of
   | ~$A.arena_fits(class | max) =>
-    (case+ $A.arena_create<byte>(class | max) of
+    (case+ $A.arena_create_class<byte>(class | max) of
      | ~$A.arena_some(ar) => $A.arena_destroy<byte>(ar)
      | ~$A.arena_none() => ())
   | ~$A.arena_too_large() => ()

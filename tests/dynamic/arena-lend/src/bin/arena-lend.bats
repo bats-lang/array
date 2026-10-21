@@ -7,7 +7,7 @@
    is past the 1 MiB alloc bound, and what was written through the barr is
    read through the piece after it is given back. *)
 implement main0 () =
-  case+ $A.arena_create<byte>($A.Arena4MiB() | 4194304) of
+  case+ $A.arena_create_class<byte>($A.Arena4MiB() | 4194304) of
   | ~$A.arena_some(ar) => let
       val p = $A.arena_alloc<byte>(ar, 1048577)
       val () = $A.set<byte>(p, 5, $A.int2byte(9))
