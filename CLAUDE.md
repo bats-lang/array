@@ -75,7 +75,8 @@ freed, and it handed out zero bytes as any type. Fix such problems; do
 not delete the facility.
 
 `tests/static` rejects each misuse (a size that is not a class, a size
-computed at run time, overfill, freeing a piece, returning
+computed at run time, a size of 0 or a negative one given to
+`arena_class_of`, overfill, freeing a piece, returning
 it to another arena, destroying with a piece out, a pointer element
 type); a piece lent as a `barr` and given back is below, under byte
 arrays; `tests/dynamic/arena` exercises pieces past the 1 MiB `alloc`
