@@ -1,0 +1,6 @@
+[package]
+name = "arena-create-deprecated"
+kind = "bin"
+
+[dependencies]
+"array" = ""

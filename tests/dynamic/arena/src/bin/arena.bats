@@ -12,7 +12,7 @@ fn class_of {n:pos} (n: int n): int =
   | ~$A.arena_too_large() => 0
 
 implement main0 () = let
-  val () = (case+ $A.arena_create<byte>($A.Arena4MiB() | 4194304) of
+  val () = (case+ $A.arena_create_class<byte>($A.Arena4MiB() | 4194304) of
     | ~$A.arena_some(ar) => let
         val p = $A.arena_alloc<byte>(ar, 1048576)
         val q = $A.arena_alloc<byte>(ar, 1048576)
@@ -32,7 +32,7 @@ implement main0 () = let
         val () = $A.arena_return<byte>(ar, r)
       in $A.arena_destroy<byte>(ar) end
     | ~$A.arena_none() => println! ("FAIL: no arena"))
-  val () = (case+ $A.arena_create<int>($A.Arena64KiB() | 65536) of
+  val () = (case+ $A.arena_create_class<int>($A.Arena64KiB() | 65536) of
     | ~$A.arena_some(ar) => let
         val p = $A.arena_alloc<int>(ar, 600)
         val q = $A.arena_alloc<int>(ar, 400)

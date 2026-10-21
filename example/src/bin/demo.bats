@@ -119,7 +119,7 @@ implement main0 () = let
 
   (* -- 8. Arena: create, alloc, return, destroy -- *)
   val () = println! ("--- arena ---")
-  val () = (case+ $A.arena_create<int>($A.Arena64KiB() | 65536) of
+  val () = (case+ $A.arena_create_class<int>($A.Arena64KiB() | 65536) of
     | ~$A.arena_some(ar) => let
         val abuf = $A.arena_alloc<int>(ar, 5)
         val () = $A.set<int>(abuf, 0, 42)
