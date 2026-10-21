@@ -277,8 +277,8 @@ drop_borrow_at
    Arena -- one large region, handed out in pieces
    ============================================================ *)
 
-(* alloc takes at most 1048576 elements, to limit fragmentation (see
-   CLAUDE.md). Code that needs more takes pieces of an arena: a region
+(* alloc takes at most 1048576 elements, a bound kept on purpose to limit
+   fragmentation (allocation size). Code that needs more takes pieces of an arena: a region
    of max elements of a, of which used are handed out, with k pieces
    outstanding. A piece is an arrx owned by the arena (o = la): it reads
    and writes like any array, free does not take it, and only
@@ -355,6 +355,200 @@ arena_destroy
   : void
 
 (* ============================================================
+   What an array holds
+   ============================================================ *)
+
+(* The cells of an array, first to last *)
+#pub datasort cells =
+  | cnil of ()
+  | ccons of (int, cells)
+
+(* CLEN(cs, n): cs has n cells *)
+#pub dataprop CLEN(cells, int) =
+  | CLEN_nil(cnil(), 0)
+  | {c:int}{cs:cells}{n:nat} CLEN_cons(ccons(c, cs), n + 1) of CLEN(cs, n)
+
+(* NTH(cs, i, v): cell i of cs is v *)
+#pub dataprop NTH(cells, int, int) =
+  | {c:int}{cs:cells} NTH_here(ccons(c, cs), 0, c)
+  | {c,v:int}{cs:cells}{i:nat} NTH_there(ccons(c, cs), i + 1, v) of NTH(cs, i, v)
+
+(* SETC(cs, i, v, cs2): cs2 is cs with its cell i set to v *)
+#pub dataprop SETC(cells, int, int, cells) =
+  | {c,v:int}{cs:cells} SETC_here(ccons(c, cs), 0, v, ccons(v, cs))
+  | {c,v:int}{cs,cs2:cells}{i:nat} SETC_there(ccons(c, cs), i + 1, v, ccons(c, cs2)) of SETC(cs, i, v, cs2)
+
+(* ============================================================
+   What the cells of an array are, proved
+   ============================================================ *)
+
+(* Setting a cell leaves the number of cells *)
+#pub prfun setc_len {cs,cs2:cells}{i:nat}{v:int}{n:nat} (SETC(cs, i, v, cs2), CLEN(cs, n)): CLEN(cs2, n)
+
+prfun _setc_len {cs,cs2:cells}{i:nat}{v:int}{n:nat} .<n>. (s: SETC(cs, i, v, cs2), l: CLEN(cs, n)): CLEN(cs2, n) =
+  case+ s of
+  | SETC_here() => (case+ l of CLEN_cons(l1) => CLEN_cons(l1))
+  | SETC_there(s1) => (case+ l of CLEN_cons(l1) => CLEN_cons(_setc_len(s1, l1)))
+
+primplement setc_len {cs,cs2}{i}{v}{n} (s, l) = _setc_len(s, l)
+
+(* The cell that was set is the value *)
+#pub prfun setc_nth_same {cs,cs2:cells}{i:nat}{v:int} (SETC(cs, i, v, cs2)): NTH(cs2, i, v)
+
+prfun _setc_nth_same {cs,cs2:cells}{i:nat}{v:int} .<i>. (s: SETC(cs, i, v, cs2)): NTH(cs2, i, v) =
+  case+ s of
+  | SETC_here() => NTH_here()
+  | SETC_there(s1) => NTH_there(_setc_nth_same(s1))
+
+primplement setc_nth_same {cs,cs2}{i}{v} (s) = _setc_nth_same(s)
+
+(* The others are as they were *)
+#pub prfun setc_nth_other {cs,cs2:cells}{i,j:nat | i != j}{v,w:int} (SETC(cs, i, v, cs2), NTH(cs, j, w)): NTH(cs2, j, w)
+
+prfun _setc_nth_other {cs,cs2:cells}{i,j:nat | i != j}{v,w:int} .<i>. (s: SETC(cs, i, v, cs2), p: NTH(cs, j, w)): NTH(cs2, j, w) =
+  case+ s of
+  | SETC_here() => (case+ p of NTH_there(p1) => NTH_there(p1))
+  | SETC_there(s1) =>
+    (case+ p of
+     | NTH_here() => NTH_here()
+     | NTH_there(p1) => NTH_there(_setc_nth_other(s1, p1)))
+
+primplement setc_nth_other {cs,cs2}{i,j}{v,w} (s, p) = _setc_nth_other(s, p)
+
+(* A cell is within the cells *)
+#pub prfun nth_in_len {cs:cells}{i:nat}{v:int}{n:nat} (NTH(cs, i, v), CLEN(cs, n)): [i < n] void
+
+prfun _nth_in_len {cs:cells}{i:nat}{v:int}{n:nat} .<i>. (p: NTH(cs, i, v), l: CLEN(cs, n)): [i < n] void =
+  case+ p of
+  | NTH_here() => (case+ l of CLEN_cons(_) => ())
+  | NTH_there(p1) => (case+ l of CLEN_cons(l1) => _nth_in_len(p1, l1))
+
+primplement nth_in_len {cs}{i}{v}{n} (p, l) = _nth_in_len(p, l)
+
+(* A cell has one value *)
+#pub prfun nth_functional {cs:cells}{i:nat}{v,w:int} (NTH(cs, i, v), NTH(cs, i, w)): [v == w] void
+
+prfun _nth_functional {cs:cells}{i:nat}{v,w:int} .<i>. (p: NTH(cs, i, v), q: NTH(cs, i, w)): [v == w] void =
+  case+ p of
+  | NTH_here() => (case+ q of NTH_here() => ())
+  | NTH_there(p1) => (case+ q of NTH_there(q1) => _nth_functional(p1, q1))
+
+primplement nth_functional {cs}{i}{v,w} (p, q) = _nth_functional(p, q)
+
+(* ============================================================
+   The array
+   ============================================================ *)
+
+(* n bytes at l holding the cells cs *)
+#pub absvtype barr(l:addr, n:int, cs:cells) = ptr
+
+
+(* n bytes, all zero, which the types know nothing more of *)
+#pub fun barr_alloc {n:pos | n <= 1048576} (n: int n): [l:agz][cs:cells] (CLEN(cs, n) | barr(l, n, cs))
+
+#pub fun barr_free {l:agz}{n:nat}{cs:cells} (a: barr(l, n, cs)): void
+
+(* Cell i, with the proof that it is cell i of the cells *)
+#pub fun barr_get {l:agz}{n,i:nat | i < n}{cs:cells} (a: !barr(l, n, cs), i: int i)
+  : [v:int | 0 <= v; v < 256] (NTH(cs, i, v) | int v)
+
+(* Cells i to i + 3, the bytes of a big-endian word most significant first, with the proof of each *)
+#pub fun barr_get_be32 {l:agz}{n,i:nat | i + 3 < n}{cs:cells} (a: !barr(l, n, cs), i: int i)
+  : [b0,b1,b2,b3:int | 0 <= b0; b0 < 256; 0 <= b1; b1 < 256; 0 <= b2; b2 < 256; 0 <= b3; b3 < 256]
+    (NTH(cs, i, b0), NTH(cs, i + 1, b1), NTH(cs, i + 2, b2), NTH(cs, i + 3, b3)
+    | @(int b0, int b1, int b2, int b3))
+
+(* Cell i set to v: the cells that are left, with the proof that they are *)
+#pub fun barr_set {l:agz}{n,i:nat | i < n}{cs:cells}{v:int | 0 <= v; v < 256} (a: barr(l, n, cs), i: int i, v: int v)
+  : [cs2:cells] (SETC(cs, i, v, cs2) | barr(l, n, cs2))
+
+(* The same three accessors as templates with no template arguments
+   (bats-lang/sha256#59): a dependent instantiates a template in its own
+   translation unit, so the C compiler inlines the read or the write into
+   the dependent's loop, which a call of the functions above (external
+   symbols compiled alone) cannot be. Same types, same bodies: barr_get,
+   barr_get_be32 and barr_set are these. Use as barr_get_inline(a, i). *)
+#pub fun{} barr_get_inline {l:agz}{n,i:nat | i < n}{cs:cells} (a: !barr(l, n, cs), i: int i)
+  : [v:int | 0 <= v; v < 256] (NTH(cs, i, v) | int v)
+
+#pub fun{} barr_get_be32_inline {l:agz}{n,i:nat | i + 3 < n}{cs:cells} (a: !barr(l, n, cs), i: int i)
+  : [b0,b1,b2,b3:int | 0 <= b0; b0 < 256; 0 <= b1; b1 < 256; 0 <= b2; b2 < 256; 0 <= b3; b3 < 256]
+    (NTH(cs, i, b0), NTH(cs, i + 1, b1), NTH(cs, i + 2, b2), NTH(cs, i + 3, b3)
+    | @(int b0, int b1, int b2, int b3))
+
+#pub fun{} barr_set_inline {l:agz}{n,i:nat | i < n}{cs:cells}{v:int | 0 <= v; v < 256} (a: barr(l, n, cs), i: int i, v: int v)
+  : [cs2:cells] (SETC(cs, i, v, cs2) | barr(l, n, cs2))
+
+(* The array that alloc gives, taken to hold cells nothing is known of; it
+   is not an array of alloc any more *)
+#pub fun barr_of_arr {l:agz}{n:nat} (a: arr(byte, l, n)): [cs:cells] (CLEN(cs, n) | barr(l, n, cs))
+
+(* The array without its cells, to be written by what knows nothing of them *)
+#pub fun barr_to_arr {l:agz}{n:nat}{cs:cells} (a: barr(l, n, cs)): arr(byte, l, n)
+
+(* A piece of an arena (or any arrx) lent as a barr. The lend keeps the
+   owner: barr_of_arrx consumes the piece and gives the barr and the proof
+   arrx_lent(l, n, o) that the memory at l belongs to o; the proof is a
+   linear view, made only here and consumed only by barr_to_arrx, which
+   takes the barr back and gives the piece of o again. While it is lent the
+   piece has not been returned (the arena's count k is unchanged, so
+   arena_destroy cannot be called), and the proof is of this l and n, so
+   the piece cannot be given back as another, or to another owner. The
+   cells are as for barr_of_arr: nothing is known of them. *)
+#pub absview arrx_lent(l:addr, n:int, o:addr)
+
+#pub fun barr_of_arrx {l:agz}{n:nat}{o:addr} (a: arrx(byte, l, n, o))
+  : [cs:cells] (CLEN(cs, n), arrx_lent(l, n, o) | barr(l, n, cs))
+
+#pub fun barr_to_arrx {l:agz}{n:nat}{o:addr}{cs:cells} (pf: arrx_lent(l, n, o) | a: barr(l, n, cs))
+  : arrx(byte, l, n, o)
+
+(* Another array holding the same cells *)
+#pub fun barr_copy {l:agz}{n:pos}{cs:cells} (a: !barr(l, n, cs), n: int n): [m:agz] barr(m, n, cs)
+
+(* ============================================================
+   Borrowing an array whose cells are known
+   ============================================================ *)
+
+(* The freeze / thaw / borrow protocol of arrx and borrow above, for a
+   barr: the borrow is indexed by the same cells, so a read through it
+   gives NTH(cs, i, v) as barr_get does, and thawing gives back the barr
+   with those very cells. k borrows are out; barr_thaw needs k = 0, so
+   no cell is set while a borrow is out. *)
+#pub absvtype cfrozen(l:addr, n:int, k:int, cs:cells) = ptr
+
+#pub absvtype cborrow(l:addr, n:int, cs:cells) = ptr
+
+#pub fun barr_freeze {l:agz}{n:nat}{cs:cells} (a: barr(l, n, cs))
+  : @(cfrozen(l, n, 1, cs), cborrow(l, n, cs))
+
+#pub fun barr_thaw {l:agz}{n:nat}{cs:cells} (f: cfrozen(l, n, 0, cs)): barr(l, n, cs)
+
+#pub fun cborrow_dup {l:agz}{n:nat}{cs:cells}{k:pos}
+  (f: !cfrozen(l, n, k, cs) >> cfrozen(l, n, k+1, cs), b: !cborrow(l, n, cs))
+  : cborrow(l, n, cs)
+
+#pub fun cborrow_drop {l:agz}{n:nat}{cs:cells}{k:pos}
+  (f: !cfrozen(l, n, k, cs) >> cfrozen(l, n, k-1, cs), b: cborrow(l, n, cs)): void
+
+(* The same bytes as a plain borrow(byte, l, n), for what reads through
+   that type (read, write_borrow, ...), counted like a cborrow: it is one
+   more borrow out, so barr_thaw (k = 0) is refused until the view is
+   given back to cborrow_view_drop. Both borrows are held at once and no
+   cell is settable meanwhile. The view is indexed by l and n only, so what
+   is read through it is not known (use cborrow_get for the cells' proof). *)
+#pub fun cborrow_view {l:agz}{n:nat}{cs:cells}{k:pos}
+  (f: !cfrozen(l, n, k, cs) >> cfrozen(l, n, k+1, cs), b: !cborrow(l, n, cs))
+  : borrow(byte, l, n)
+
+#pub fun cborrow_view_drop {l:agz}{n:nat}{cs:cells}{k:pos}
+  (f: !cfrozen(l, n, k, cs) >> cfrozen(l, n, k-1, cs), b: borrow(byte, l, n)): void
+
+(* Cell i, with the proof that it is cell i of the cells *)
+#pub fun cborrow_get {l:agz}{n,i:nat | i < n}{cs:cells} (b: !cborrow(l, n, cs), i: int i)
+  : [v:int | 0 <= v; v < 256] (NTH(cs, i, v) | int v)
+
+(* ============================================================
    C runtime helpers
    ============================================================ *)
 
@@ -423,9 +617,13 @@ local
 
 $UNSAFE begin
   assume arrx(a, l, n, o) = ptr l
+  assume barr(l, n, cs) = ptr l
   assume frozenx(a, l, n, k, o) = ptr l
   assume arena(a, l, max, used, k) = ptr l
   assume borrow(a, l, n) = ptr l
+  assume cfrozen(l, n, k, cs) = ptr l
+  assume cborrow(l, n, cs) = ptr l
+  assume arrx_lent(l, n, o) = unit_v
   assume text(n) = ptr
   assume text_builder(n, i) = ptr
 end
@@ -456,6 +654,87 @@ implement alloc<Int>(n) = _alloc_zeroed<Int>(n)
 implement{a}
 free{l}{n}(arr) =
   $UNSAFE begin $extfcall(void, "free", arr) end
+
+(* -- Byte arrays that know their contents -- *)
+
+implement barr_alloc {n} (n) =
+  $UNSAFE begin
+    $UNSAFE.castvwtp0{[l:agz][cs:cells] (CLEN(cs, n) | barr(l, n, cs))}(_calloc(n, sizeof<byte>))
+  end
+
+implement barr_free {l}{n}{cs} (a) =
+  $UNSAFE begin $extfcall(void, "free", a) end
+
+implement{} barr_get_inline {l}{n,i}{cs} (a, i) =
+  $UNSAFE begin
+    $UNSAFE.cast{[v:int | 0 <= v; v < 256] (NTH(cs, i, v) | int v)}(byte2int0($UNSAFE.ptr0_get<byte>(ptr_add<byte>(a, i))))
+  end
+
+implement barr_get {l}{n,i}{cs} (a, i) = barr_get_inline{l}{n,i}{cs}(a, i)
+
+(* Not trusted: four barr_get *)
+implement{} barr_get_be32_inline {l}{n,i}{cs} (a, i) = let
+  val (p0 | b0) = barr_get_inline{l}{n,i}{cs}(a, i)
+  val (p1 | b1) = barr_get_inline{l}{n,i+1}{cs}(a, i + 1)
+  val (p2 | b2) = barr_get_inline{l}{n,i+2}{cs}(a, i + 2)
+  val (p3 | b3) = barr_get_inline{l}{n,i+3}{cs}(a, i + 3)
+in (p0, p1, p2, p3 | @(b0, b1, b2, b3)) end
+
+implement barr_get_be32 {l}{n,i}{cs} (a, i) = barr_get_be32_inline{l}{n,i}{cs}(a, i)
+
+implement{} barr_set_inline {l}{n,i}{cs}{v} (a, i, v) = let
+  val () = $UNSAFE begin $UNSAFE.ptr0_set<byte>(ptr_add<byte>(a, i), $UNSAFE.cast{byte}(v)) end
+in
+  $UNSAFE begin $UNSAFE.castvwtp0{[cs2:cells] (SETC(cs, i, v, cs2) | barr(l, n, cs2))}(a) end
+end
+
+implement barr_set {l}{n,i}{cs}{v} (a, i, v) = barr_set_inline{l}{n,i}{cs}{v}(a, i, v)
+
+implement barr_of_arr {l}{n} (a) =
+  $UNSAFE begin $UNSAFE.castvwtp0{[cs:cells] (CLEN(cs, n) | barr(l, n, cs))}(a) end
+
+implement barr_to_arr {l}{n}{cs} (a) =
+  $UNSAFE begin $UNSAFE.castvwtp0{arr(byte, l, n)}(a) end
+
+implement barr_of_arrx {l}{n}{o} (a) =
+  $UNSAFE begin $UNSAFE.castvwtp0{[cs:cells] (CLEN(cs, n), arrx_lent(l, n, o) | barr(l, n, cs))}(a) end
+
+implement barr_to_arrx {l}{n}{o}{cs} (pf | a) = let
+  prval unit_v() = pf
+in
+  $UNSAFE begin $UNSAFE.castvwtp0{arrx(byte, l, n, o)}(a) end
+end
+
+implement barr_copy {l}{n}{cs} (a, n) = let
+  val copy = $UNSAFE begin _calloc(n, sizeof<byte>) end
+  fun go {i:nat | i <= n} .<n - i>. (i: int i): void =
+    if i >= n then ()
+    else let
+      val () = $UNSAFE begin
+        $UNSAFE.ptr0_set<byte>(ptr_add<byte>(copy, i), $UNSAFE.ptr0_get<byte>(ptr_add<byte>(a, i)))
+      end
+    in go(i + 1) end
+  val () = go(0)
+in
+  $UNSAFE begin $UNSAFE.castvwtp0{[m:agz] barr(m, n, cs)}(copy) end
+end
+
+implement barr_freeze {l}{n}{cs} (a) = @(a, a)
+
+implement barr_thaw {l}{n}{cs} (f) = f
+
+implement cborrow_dup {l}{n}{cs}{k} (f, b) = b
+
+implement cborrow_drop {l}{n}{cs}{k} (f, b) = ()
+
+implement cborrow_view {l}{n}{cs}{k} (f, b) = b
+
+implement cborrow_view_drop {l}{n}{cs}{k} (f, b) = ()
+
+implement cborrow_get {l}{n,i}{cs} (b, i) =
+  $UNSAFE begin
+    $UNSAFE.cast{[v:int | 0 <= v; v < 256] (NTH(cs, i, v) | int v)}(byte2int0($UNSAFE.ptr0_get<byte>(ptr_add<byte>(b, i))))
+  end
 
 (* -- Element access -- *)
 

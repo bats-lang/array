@@ -1,0 +1,6 @@
+[package]
+name = "borrow-read"
+kind = "bin"
+
+[dependencies]
+"array" = ""

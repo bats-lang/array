@@ -1,0 +1,6 @@
+[package]
+name = "content_inline"
+kind = "bin"
+
+[dependencies]
+"array" = ""

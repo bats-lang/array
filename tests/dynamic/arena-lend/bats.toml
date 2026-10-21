@@ -1,0 +1,6 @@
+[package]
+name = "arena-lend"
+kind = "bin"
+
+[dependencies]
+"array" = ""
