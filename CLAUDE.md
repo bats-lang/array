@@ -63,8 +63,10 @@ removed with it (array#67).
 
 ## An arena's size is a class
 
-An arena is one of five sizes fixed at compile time (`ARENA_CLASS`),
-counted in elements of its type, not bytes: 65536, 262144, 1048576,
+An arena made by `arena_create_class` is one of five sizes fixed at
+compile time (`ARENA_CLASS`); the deprecated `arena_create` (removed by
+array#67) makes any size up to 268435456 and gives the allocator none of
+what follows. The class sizes are counted in elements of its type, not bytes: 65536, 262144, 1048576,
 4194304 and 16777216 elements, powers of 4. For a byte arena those are
 64 KiB, 256 KiB, 1 MiB, 4 MiB and 16 MiB. For an arena of any other
 element type the class is an element count and the byte size is that
@@ -72,7 +74,8 @@ count times the element's size (16777216 `int` elements are 64 MiB), so
 the byte figures hold for byte arenas only. Every arena quire has is a
 byte arena.
 
-A freed region is then the size of the next one asked for, so an
+A freed region of a class arena is then the size of the next one asked for
+(not so while the deprecated form exists: its regions are of any size), so an
 allocator can keep one free list per class and reuse a region whole. The
 allocator's free list of large blocks (bats-lang/bats#241, open) reuses a
 block only for a request between half its size and its full size, so

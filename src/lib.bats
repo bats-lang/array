@@ -295,10 +295,11 @@ drop_borrow_at
   | {l:agz} arena_some(a, max) of arena(a, l, max, 0, 0)
   | arena_none(a, max) of ()
 
-(* The sizes an arena may have, counted in elements of its type (not
-   bytes): five constants fixed at compile time, so a freed region is
-   the size of the next one asked for, where regions of any size would
-   pile up unused (the allocator's free list, bats-lang/bats#241, does
+(* The sizes an arena made by arena_create_class may have (the deprecated
+   arena_create takes any size and has none of this), counted in elements of
+   its type (not bytes): five constants fixed at compile time, so a freed
+   region is the size of the next one asked for, where regions of any size
+   would pile up unused (the allocator's free list, bats-lang/bats#241, does
    not use these classes yet). Each constructor is indexed by a literal:
    a size computed at run time, or a constant that is not one of these,
    has no proof, and arena_create_class does not take it. Powers of 4, from
@@ -587,8 +588,11 @@ _arr_copy_at(void *dst, int off, void *src, int len) {
 }
 /* An arena: a zeroed region of max elements of size sz, of which used
    are handed out. Pieces are taken in order and never reused. int
-   arithmetic (the wasm runtime has no size_t): max <= 2^24 (ARENA_MOST)
-   and sz <= 4 keep max * sz within int. */
+   arithmetic (the wasm runtime has no size_t): max <= 2^28 (what the
+   deprecated arena_create passes; arena_create_class passes at most
+   ARENA_MOST = 2^24) and sz <= 4 (byte, char, bool, int, uint, Int) keep
+   max * sz and used * sz within int (2^28 * 4 = 2^30). Nothing here relies on
+   the class bound. */
 typedef struct { char *base; int used; int sz; } _arr_arena_t;
 
 static inline void *
