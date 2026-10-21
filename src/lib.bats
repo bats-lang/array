@@ -294,17 +294,20 @@ drop_borrow_at
   | {l:agz} arena_some(a, max) of arena(a, l, max, 0, 0)
   | arena_none(a, max) of ()
 
-(* The sizes an arena may have, in elements: a few constants fixed at
-   compile time, so a freed region is the size of the next one asked
-   for and can be reused whole (an allocator can keep a list per
-   size), where regions of any size would pile up unused. Each
-   constructor is indexed by a literal: a size computed at run time, or
-   a constant that is not one of these, has no proof, and arena_create
-   does not take it. Powers of 4 from 64 KiB to 16 MiB: a piece put in
-   the smallest class that holds it wastes less than three quarters of
-   it. The sizes were measured on EPUBs (bats-lang/quire#251): a page's
-   arena is 4 MiB, and 16 MiB is the largest file a reader holds whole
-   (its sync file); nothing needs more. *)
+(* The sizes an arena may have, counted in elements of its type (not
+   bytes): five constants fixed at compile time, so a freed region is
+   the size of the next one asked for, where regions of any size would
+   pile up unused (the allocator's free list, bats-lang/bats#241, does
+   not use these classes yet). Each constructor is indexed by a literal:
+   a size computed at run time, or a constant that is not one of these,
+   has no proof, and arena_create does not take it. Powers of 4, from
+   65536 to 16777216 elements: a piece above the smallest class fills
+   more than a quarter of its arena. For byte arenas that is 64 KiB to
+   16 MiB; quire's page arena is PAGE_BYTES, 4 MiB (src/pages.bats), and
+   its sync file, the largest it holds whole, is SYNC_MAX_BYTES, 16 MiB
+   (src/sync.bats). For another element type the class bounds the count
+   only, and the byte size is the class times the element size, so the
+   byte figures do not hold there. *)
 #pub dataprop ARENA_CLASS(int) =
   | Arena64KiB(65536)
   | Arena256KiB(262144)
@@ -314,9 +317,6 @@ drop_borrow_at
 
 (* The largest class *)
 #pub stadef ARENA_MOST = 16777216
-
-(* Every class is positive and at most ARENA_MOST *)
-#pub prfn arena_class_bounds {max:int} (class: ARENA_CLASS(max)): [0 < max; max <= ARENA_MOST] void
 
 (* The smallest class that holds n elements, or none: n is over
    ARENA_MOST *)
@@ -872,7 +872,9 @@ extern fun _arena_destroy_impl
   (arena: ptr): void = "mac#_arr_arena_destroy"
 end
 
-primplement arena_class_bounds (class) =
+(* Every class is positive and at most ARENA_MOST; private, used only by
+   arena_create below (proof, no run-time content). *)
+prfn _arena_class_bounds {max:int} (class: ARENA_CLASS(max)): [0 < max; max <= ARENA_MOST] void =
   case+ class of
   | Arena64KiB() => ()
   | Arena256KiB() => ()
@@ -896,17 +898,17 @@ in
 end
 
 implement arena_create<byte>(class | max) = let
-  prval () = arena_class_bounds(class) in _arena_create_zeroed<byte>(max) end
+  prval () = _arena_class_bounds(class) in _arena_create_zeroed<byte>(max) end
 implement arena_create<char>(class | max) = let
-  prval () = arena_class_bounds(class) in _arena_create_zeroed<char>(max) end
+  prval () = _arena_class_bounds(class) in _arena_create_zeroed<char>(max) end
 implement arena_create<bool>(class | max) = let
-  prval () = arena_class_bounds(class) in _arena_create_zeroed<bool>(max) end
+  prval () = _arena_class_bounds(class) in _arena_create_zeroed<bool>(max) end
 implement arena_create<int>(class | max) = let
-  prval () = arena_class_bounds(class) in _arena_create_zeroed<int>(max) end
+  prval () = _arena_class_bounds(class) in _arena_create_zeroed<int>(max) end
 implement arena_create<uint>(class | max) = let
-  prval () = arena_class_bounds(class) in _arena_create_zeroed<uint>(max) end
+  prval () = _arena_class_bounds(class) in _arena_create_zeroed<uint>(max) end
 implement arena_create<Int>(class | max) = let
-  prval () = arena_class_bounds(class) in _arena_create_zeroed<Int>(max) end
+  prval () = _arena_class_bounds(class) in _arena_create_zeroed<Int>(max) end
 
 implement{a}
 arena_alloc{la}{max,used,k}{n}(ar, n) = _arena_alloc_impl(ar, n)

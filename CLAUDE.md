@@ -39,19 +39,35 @@ no runtime checks:
 
 ## An arena's size is a class
 
-An arena is one of a few sizes fixed at compile time (`ARENA_CLASS`:
-64 KiB, 256 KiB, 1 MiB, 4 MiB and 16 MiB elements, powers of 4), so a
-freed region is the size of the next one asked for: the allocator can
-reuse it whole (bats-lang/bats#241) instead of piling up regions of odd
-sizes. `arena_create` takes a proof `ARENA_CLASS(max)`, whose
-constructors are each indexed by a literal, so a size computed at run
-time, or a constant that is not a class, does not type-check.
-`arena_class_of(n)` gives the smallest class that holds `n` elements,
-or `arena_too_large` over `ARENA_MOST` (16 MiB). The classes were chosen
-by measuring EPUBs (bats-lang/quire#251): a page's arena is 4 MiB, and
-the largest file a reader holds whole (its sync file) is 16 MiB. Do not
-add a class for a size one caller computes; take the smallest class that
-holds it.
+An arena is one of five sizes fixed at compile time (`ARENA_CLASS`),
+counted in elements of its type, not bytes: 65536, 262144, 1048576,
+4194304 and 16777216 elements, powers of 4. For a byte arena those are
+64 KiB, 256 KiB, 1 MiB, 4 MiB and 16 MiB. For an arena of any other
+element type the class is an element count and the byte size is that
+count times the element's size (16777216 `int` elements are 64 MiB), so
+the byte figures hold for byte arenas only. Every arena quire has is a
+byte arena.
+
+A freed region is then the size of the next one asked for, so an
+allocator can keep one free list per class and reuse a region whole. The
+allocator's free list of large blocks (bats-lang/bats#241, open) reuses a
+block only for a request between half its size and its full size, so
+odd-sized arenas pile up there today. Which classes #241 uses is decided
+there; nothing in this package depends on it.
+
+`arena_create` takes a proof `ARENA_CLASS(max)`, whose constructors are
+each indexed by a literal, so a size computed at run time, or a constant
+that is not a class, does not type-check. `arena_class_of(n)` gives the
+smallest class that holds `n` elements, or `arena_too_large` over
+`ARENA_MOST` (16777216 elements).
+
+The byte figures are quire's, in its source: a page's arena is
+`PAGE_BYTES`, 4 MiB (`src/pages.bats`); a clip table is `CLIP_MAX` (32768)
+times 32 bytes, 1 MiB (`src/overlay.bats`); the largest file a reader
+holds whole is its sync file, `SYNC_MAX_BYTES`, 16 MiB (`src/sync.bats`).
+The sizes of the EPUB parts they hold are measured on a seeded sample in
+bats-lang/array#29. Do not add a class for a size one caller computes;
+take the smallest class that holds it.
 
 The first arena (removed in #21 and restored here) had none of these:
 `arena_alloc` never compared its offset to the size, its arrays could be
