@@ -4,8 +4,8 @@
 (* A piece lent as a barr comes back as a piece of its own arena: returning
    it to another arena does not type-check. *)
 implement main0 () =
-  case+ $A.arena_create<byte>(16) of
-  | ~$A.arena_some(a1) => (case+ $A.arena_create<byte>(16) of
+  case+ $A.arena_create<byte>($A.Arena64KiB() | 65536) of
+  | ~$A.arena_some(a1) => (case+ $A.arena_create<byte>($A.Arena64KiB() | 65536) of
     | ~$A.arena_some(a2) => let
         val p = $A.arena_alloc<byte>(a1, 10)
         val q = $A.arena_alloc<byte>(a2, 10)

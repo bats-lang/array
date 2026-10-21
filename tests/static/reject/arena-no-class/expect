@@ -1,0 +1,11 @@
+function main0
+line 6
+proof arity mismatch: the function requires 1 proof arguments.
+proof arity mismatch:
+The actual proof arity is: 1
+The needed proof arity is: -1
+the dynamic expression cannot be assigned the type [S2Eapp(S2Ecst(ARENA_CLASS); S2EVar(5519))].
+mismatch of static terms (tyleq):
+The actual term is: S2Eapp(S2Ecst(g1int_int_t0ype); S2Eextkind(atstype_int), S2Eintinf(65536))
+The needed term is: S2Eapp(S2Ecst(ARENA_CLASS); S2EVar(5519))
+arity mismatch: more arguments are expected.

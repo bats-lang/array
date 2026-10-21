@@ -17,8 +17,8 @@ pieces whose sizes the types account for, and released as a whole.
 
 ## The arena is the pool
 
-`arena_create<a>(max)` reserves one zeroed region of `max` elements (up to
-268435456); `arena_alloc` hands out pieces of it, `arena_return` takes them
+`arena_create<a>(class | max)` reserves one zeroed region of `max`
+elements, `max` one of the size classes; `arena_alloc` hands out pieces of it, `arena_return` takes them
 back, and `arena_destroy` releases the region. It is sound by type, with
 no runtime checks:
 
@@ -37,12 +37,46 @@ no runtime checks:
 * When the region cannot be had, `arena_create` returns `arena_none`,
   never a null arena.
 
+## An arena's size is a class
+
+An arena is one of five sizes fixed at compile time (`ARENA_CLASS`),
+counted in elements of its type, not bytes: 65536, 262144, 1048576,
+4194304 and 16777216 elements, powers of 4. For a byte arena those are
+64 KiB, 256 KiB, 1 MiB, 4 MiB and 16 MiB. For an arena of any other
+element type the class is an element count and the byte size is that
+count times the element's size (16777216 `int` elements are 64 MiB), so
+the byte figures hold for byte arenas only. Every arena quire has is a
+byte arena.
+
+A freed region is then the size of the next one asked for, so an
+allocator can keep one free list per class and reuse a region whole. The
+allocator's free list of large blocks (bats-lang/bats#241, open) reuses a
+block only for a request between half its size and its full size, so
+odd-sized arenas pile up there today. Which classes #241 uses is decided
+there; nothing in this package depends on it.
+
+`arena_create` takes a proof `ARENA_CLASS(max)`, whose constructors are
+each indexed by a literal, so a size computed at run time, or a constant
+that is not a class, does not type-check. `arena_class_of(n)` gives the
+smallest class that holds `n` elements, or `arena_too_large` over
+`ARENA_MOST` (16777216 elements).
+
+The byte figures are quire's, in its source: a page's arena is
+`PAGE_BYTES`, 4 MiB (`src/pages.bats`); a clip table is `CLIP_MAX` (32768)
+times 32 bytes, 1 MiB (`src/overlay.bats`); the largest file a reader
+holds whole is its sync file, `SYNC_MAX_BYTES`, 16 MiB (`src/sync.bats`).
+The sizes of the EPUB parts they hold are measured on a seeded sample in
+bats-lang/array#29. Do not add a class for a size one caller computes;
+take the smallest class that holds it.
+
 The first arena (removed in #21 and restored here) had none of these:
 `arena_alloc` never compared its offset to the size, its arrays could be
 freed, and it handed out zero bytes as any type. Fix such problems; do
 not delete the facility.
 
-`tests/static` rejects each misuse (overfill, freeing a piece, returning
+`tests/static` rejects each misuse (a size that is not a class, a size
+computed at run time, a size of 0 or a negative one given to
+`arena_class_of`, overfill, freeing a piece, returning
 it to another arena, destroying with a piece out, a pointer element
 type); a piece lent as a `barr` and given back is below, under byte
 arrays; `tests/dynamic/arena` exercises pieces past the 1 MiB `alloc`

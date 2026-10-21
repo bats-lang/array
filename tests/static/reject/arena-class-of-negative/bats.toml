@@ -1,0 +1,6 @@
+[package]
+name = "arena-class-of-negative"
+kind = "bin"
+
+[dependencies]
+"array" = ""
