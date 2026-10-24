@@ -238,7 +238,7 @@ template or function that another package declares.
 Every input to CI is pinned in the source (bats-lang/repository-prototype#269),
 so a commit that passes keeps passing:
 
-* The package has no dependencies, so it has no `bats.lock`.
+* The package has no dependencies, so its `bats.lock` is the empty one `bats lock --repository <dir>` writes ("wrote bats.lock (no dependencies)"); the shared package-check.yml requires a lock, so `bats check` also refuses a `#use` the lock does not name.
 * The compiler is the commit in `.github/bats-version`, read by every
   workflow that builds bats (and by the publish workflow).
 * The package repository is fetched at the commit in
