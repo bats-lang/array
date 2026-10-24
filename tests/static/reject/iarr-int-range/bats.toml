@@ -1,0 +1,6 @@
+[package]
+name = "iarr-int-range"
+kind = "bin"
+
+[dependencies]
+"array" = ""

@@ -1,0 +1,6 @@
+[package]
+name = "iarr-set-out-of-bound"
+kind = "bin"
+
+[dependencies]
+"array" = ""

@@ -1,0 +1,6 @@
+[package]
+name = "iarr-fresh-is-not-zero"
+kind = "bin"
+
+[dependencies]
+"array" = ""

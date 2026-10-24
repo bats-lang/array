@@ -1,0 +1,6 @@
+[package]
+name = "iarr-use"
+kind = "bin"
+
+[dependencies]
+"array" = ""
