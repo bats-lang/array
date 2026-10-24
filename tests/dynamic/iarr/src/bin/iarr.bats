@@ -9,10 +9,10 @@
 
 (* a pseudo-random generator, a linear congruence on 16 bits of the state
    (kept small so that no step overflows an int) *)
-fn next (s: int): int = nmod(s * 75 + 74, 65537)
+fn next {s:nat} (s: int s): [r:nat | r < 65537] int r = nmod(s * 75 + 74, 65537)
 
-fun model_run {l:agz}{n:pos}{cs:$A.cells}{lm:agz}{steps:nat} .<steps>.
-  (a: $A.iarr(l, n, cs), n: int n, model: !$A.arr(int, lm, n), seed: int, steps: int steps)
+fun model_run {l:agz}{n:pos}{cs:$A.cells}{lm:agz}{seed:nat}{steps:nat} .<steps>.
+  (a: $A.iarr(l, n, cs), n: int n, model: !$A.arr(int, lm, n), seed: int seed, steps: int steps)
   : [cs2:$A.cells] $A.iarr(l, n, cs2) =
   if steps <= 0 then a
   else let
