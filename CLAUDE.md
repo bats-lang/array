@@ -202,6 +202,55 @@ bound.
   and `barr_to_arrx` forget the cells, and `barr_of_arr` and `barr_of_arrx`
   start again from cells nothing is known of.
 
+## Int arrays know their contents (bats-lang/array#49)
+
+`iarr(l, n, cs)` is n C ints at l holding the cells `cs`, the `barr` pattern for
+ints (keyword: iarr), so a value read back from a table has the index the
+program proved when it wrote it, and a dependent needs no runtime clamp:
+
+* `iarr_alloc` (at most 1048576 elements, as `alloc`) gives `CLEN(cs, n)` and
+  `ZEROS(cs, n)` (calloc leaves every cell 0); `iarr_get` gives the cell with
+  `NTH(cs, i, v)`; `iarr_set` consumes the array and gives it back with
+  `SETC(cs, i, v, cs2)`; `iarr_free`. The cell lemmas are `barr`'s (`setc_nth_same`,
+  `setc_nth_other`, `nth_functional`, `nth_in_len`), on the same `cells`.
+* **Element width: 32 bits** (keyword: iarr width). The dependents' values are
+  positions of a file, entry numbers and chain links (bats's with-env table:
+  positions under 65537, entries under 1025), which fit with room to spare. A
+  value is within [-2147483648, 2147483647] in the types of `iarr_get` and
+  `iarr_set`. A 64-bit element waits for a dependent that needs one. F*'s
+  Low* buffers (`LowStar.Buffer`: `index` and `upd` stated with `as_seq`), Dafny
+  arrays (a quantified invariant over `a[i]`) and HACL*'s buffers state the
+  contents in the logic the same way, at the width of the element they hold.
+* **A uniform bound**: `ALLIN(cs, lo, hi)` says every cell is within [lo, hi].
+  `allin_nth` (a cell of such cells is within it), `allin_setc` (setting a cell to
+  a value within it keeps it), `allin_zeros` (a zeroed array is within any
+  bound that holds 0, so `iarr_alloc`'s `ZEROS` starts it), `allin_widen`,
+  `zeros_nth` and `zeros_len` are proved here, with no `praxi` and no `assume`.
+  `iarr_get_in` and `iarr_set_in` are `iarr_get`/`iarr_set` with that proof: the
+  read is `[v:int | lo <= v; v <= hi]`. Not trusted (ordinary functions over the
+  trusted two).
+* A bound that is not uniform (a column of positions, another of links, a
+  value after its name) is the dependent's own dataprop over `cells`, kept by
+  `setc_nth_other` and `setc_nth_same`: it needs nothing more from this package.
+* **Trusted**: `iarr_alloc`, `iarr_free`, `iarr_get` and `iarr_set`, in the
+  implementation block of `lib.bats`, each a pointer cast or one int read or
+  written. Assumed: `iarr` and `arr(int, ...)` are both the pointer to the n
+  ints, a C int is 32 bits, calloc's memory is all zero bits (the int 0).
+  `tests/dynamic/iarr` runs them (a fresh array is zeros, the 32-bit ends, a set
+  leaves the other cells, 3000 pseudo-random sets against a plain array); seven
+  one-line mutants of the four were each caught by it under valgrind (a wrong
+  stride, the next cell, a value plus one, the wrong cell, one byte per
+  element, no zeroing, no free). `tests/static/reject/iarr-*` rejects a wrong
+  cell, a cell past the end, the lemma about other cells used for the same
+  cell, a fresh cell claimed not 0, a value out of the bound, a bound
+  tighter than the proof, a bound proof kept over a plain `iarr_set`, a
+  narrower widening, a value over 32 bits, an array used after `iarr_set`,
+  freed twice, not freed, and over 1048576 elements.
+* The lemmas are checked by the gmp solver, and quire's `mutation_check.py`
+  over `src/lib.bats` rejects every false variant of them but two that are true
+  statements: `allin_widen` and `allin_zeros` with `hi + 1` (a wider bound is
+  implied by the narrower).
+
 ## The accessors as templates (bats-lang/sha256#59)
 
 `barr_get`, `barr_get_be32` and `barr_set` are external symbols: a dependent
