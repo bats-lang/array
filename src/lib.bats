@@ -446,6 +446,84 @@ prfun _nth_functional {cs:cells}{i:nat}{v,w:int} .<i>. (p: NTH(cs, i, v), q: NTH
 primplement nth_functional {cs}{i}{v,w} (p, q) = _nth_functional(p, q)
 
 (* ============================================================
+   Cells that are ints, with a bound (bats-lang/array#49)
+   ============================================================ *)
+
+(* ALLIN(cs, lo, hi): every cell of cs is at least lo and at most hi *)
+#pub dataprop ALLIN(cells, int, int) =
+  | {lo,hi:int} ALLIN_nil(cnil(), lo, hi)
+  | {c,lo,hi:int | lo <= c; c <= hi}{cs:cells} ALLIN_cons(ccons(c, cs), lo, hi) of ALLIN(cs, lo, hi)
+
+(* ZEROS(cs, n): cs is n cells, each 0 (what a zeroed allocation holds) *)
+#pub dataprop ZEROS(cells, int) =
+  | ZEROS_nil(cnil(), 0)
+  | {cs:cells}{n:nat} ZEROS_cons(ccons(0, cs), n + 1) of ZEROS(cs, n)
+
+(* A cell of cells that are all within the bound is within it *)
+#pub prfun allin_nth {cs:cells}{lo,hi:int}{i:nat}{v:int} (ALLIN(cs, lo, hi), NTH(cs, i, v)): [lo <= v; v <= hi] void
+
+prfun _allin_nth {cs:cells}{lo,hi:int}{i:nat}{v:int} .<i>. (a: ALLIN(cs, lo, hi), p: NTH(cs, i, v)): [lo <= v; v <= hi] void =
+  case+ p of
+  | NTH_here() => (case+ a of ALLIN_cons(_) => ())
+  | NTH_there(p1) => (case+ a of ALLIN_cons(a1) => _allin_nth(a1, p1))
+
+primplement allin_nth {cs}{lo,hi}{i}{v} (a, p) = _allin_nth(a, p)
+
+(* Setting a cell to a value within the bound keeps every cell within it *)
+#pub prfun allin_setc {cs,cs2:cells}{lo,hi:int}{i:nat}{v:int | lo <= v; v <= hi}
+  (ALLIN(cs, lo, hi), SETC(cs, i, v, cs2)): ALLIN(cs2, lo, hi)
+
+prfun _allin_setc {cs,cs2:cells}{lo,hi:int}{i:nat}{v:int | lo <= v; v <= hi} .<i>.
+  (a: ALLIN(cs, lo, hi), s: SETC(cs, i, v, cs2)): ALLIN(cs2, lo, hi) =
+  case+ s of
+  | SETC_here() => (case+ a of ALLIN_cons(a1) => ALLIN_cons(a1))
+  | SETC_there(s1) => (case+ a of ALLIN_cons(a1) => ALLIN_cons(_allin_setc(a1, s1)))
+
+primplement allin_setc {cs,cs2}{lo,hi}{i}{v} (a, s) = _allin_setc(a, s)
+
+(* A bound is kept by a wider one *)
+#pub prfun allin_widen {cs:cells}{lo,hi,lo2,hi2:int | lo2 <= lo; hi <= hi2}{n:nat}
+  (ALLIN(cs, lo, hi), CLEN(cs, n)): ALLIN(cs, lo2, hi2)
+
+prfun _allin_widen {cs:cells}{lo,hi,lo2,hi2:int | lo2 <= lo; hi <= hi2}{n:nat} .<n>.
+  (a: ALLIN(cs, lo, hi), l: CLEN(cs, n)): ALLIN(cs, lo2, hi2) =
+  case+ l of
+  | CLEN_nil() => ALLIN_nil()
+  | CLEN_cons(l1) => (case+ a of ALLIN_cons(a1) => ALLIN_cons(_allin_widen(a1, l1)))
+
+primplement allin_widen {cs}{lo,hi,lo2,hi2}{n} (a, l) = _allin_widen(a, l)
+
+(* Cells that are all 0 are within any bound that holds 0 *)
+#pub prfun allin_zeros {cs:cells}{lo,hi:int | lo <= 0; 0 <= hi}{n:nat} (ZEROS(cs, n)): ALLIN(cs, lo, hi)
+
+prfun _allin_zeros {cs:cells}{lo,hi:int | lo <= 0; 0 <= hi}{n:nat} .<n>. (z: ZEROS(cs, n)): ALLIN(cs, lo, hi) =
+  case+ z of
+  | ZEROS_nil() => ALLIN_nil()
+  | ZEROS_cons(z1) => ALLIN_cons(_allin_zeros(z1))
+
+primplement allin_zeros {cs}{lo,hi}{n} (z) = _allin_zeros(z)
+
+(* A cell of cells that are all 0 is 0 *)
+#pub prfun zeros_nth {cs:cells}{i:nat}{v:int}{n:nat} (ZEROS(cs, n), NTH(cs, i, v)): [v == 0] void
+
+prfun _zeros_nth {cs:cells}{i:nat}{v:int}{n:nat} .<i>. (z: ZEROS(cs, n), p: NTH(cs, i, v)): [v == 0] void =
+  case+ p of
+  | NTH_here() => (case+ z of ZEROS_cons(_) => ())
+  | NTH_there(p1) => (case+ z of ZEROS_cons(z1) => _zeros_nth(z1, p1))
+
+primplement zeros_nth {cs}{i}{v}{n} (z, p) = _zeros_nth(z, p)
+
+(* Zeroed cells are as many as their number says *)
+#pub prfun zeros_len {cs:cells}{n:nat} (ZEROS(cs, n)): CLEN(cs, n)
+
+prfun _zeros_len {cs:cells}{n:nat} .<n>. (z: ZEROS(cs, n)): CLEN(cs, n) =
+  case+ z of
+  | ZEROS_nil() => CLEN_nil()
+  | ZEROS_cons(z1) => CLEN_cons(_zeros_len(z1))
+
+primplement zeros_len {cs}{n} (z) = _zeros_len(z)
+
+(* ============================================================
    The array
    ============================================================ *)
 
@@ -559,6 +637,45 @@ primplement nth_functional {cs}{i}{v,w} (p, q) = _nth_functional(p, q)
   : [v:int | 0 <= v; v < 256] (NTH(cs, i, v) | int v)
 
 (* ============================================================
+   Int arrays that know their contents (bats-lang/array#49)
+   ============================================================ *)
+
+(* n C ints at l holding the cells cs. Element width: an int is 32 bits
+   (keyword: iarr width), so a cell is within [-2147483648, 2147483647];
+   the names, spans and table entries of the dependents (bats's with-env
+   table: positions of a file under 65537 bytes, entry numbers under 1025)
+   fit with room to spare, and a 64-bit element is not made until a
+   dependent needs one. *)
+#pub absvtype iarr(l:addr, n:int, cs:cells) = ptr
+
+(* n zeroed ints: the cells are all 0, as calloc leaves them *)
+#pub fun iarr_alloc {n:pos | n <= 1048576} (n: int n)
+  : [l:agz][cs:cells] (CLEN(cs, n), ZEROS(cs, n) | iarr(l, n, cs))
+
+#pub fun iarr_free {l:agz}{n:nat}{cs:cells} (a: iarr(l, n, cs)): void
+
+(* Cell i, with the proof that it is cell i of the cells *)
+#pub fun iarr_get {l:agz}{n,i:nat | i < n}{cs:cells} (a: !iarr(l, n, cs), i: int i)
+  : [v:int | ~2147483648 <= v; v <= 2147483647] (NTH(cs, i, v) | int v)
+
+(* Cell i set to v: the cells that are left, with the proof that they are *)
+#pub fun iarr_set {l:agz}{n,i:nat | i < n}{cs:cells}{v:int | ~2147483648 <= v; v <= 2147483647}
+  (a: iarr(l, n, cs), i: int i, v: int v)
+  : [cs2:cells] (SETC(cs, i, v, cs2) | iarr(l, n, cs2))
+
+(* Cell i of cells that are all within [lo, hi]: the value is indexed by
+   the bound, so the caller needs no clamp. Not trusted: iarr_get and
+   allin_nth. *)
+#pub fun iarr_get_in {l:agz}{n,i:nat | i < n}{cs:cells}{lo,hi:int | ~2147483648 <= lo; hi <= 2147483647}
+  (pf: ALLIN(cs, lo, hi) | a: !iarr(l, n, cs), i: int i): [v:int | lo <= v; v <= hi] int v
+
+(* Cell i set to a value within [lo, hi]: the cells are all within it still.
+   Not trusted: iarr_set and allin_setc. *)
+#pub fun iarr_set_in {l:agz}{n,i:nat | i < n}{cs:cells}{lo,hi:int | ~2147483648 <= lo; hi <= 2147483647}{v:int | lo <= v; v <= hi}
+  (pf: ALLIN(cs, lo, hi) | a: iarr(l, n, cs), i: int i, v: int v)
+  : [cs2:cells] (ALLIN(cs2, lo, hi) | iarr(l, n, cs2))
+
+(* ============================================================
    C runtime helpers
    ============================================================ *)
 
@@ -636,6 +753,7 @@ $UNSAFE begin
   assume borrow(a, l, n) = ptr l
   assume cfrozen(l, n, k, cs) = ptr l
   assume cborrow(l, n, cs) = ptr l
+  assume iarr(l, n, cs) = ptr l
   assume arrx_lent(l, n, o) = unit_v
   assume text(n) = ptr
   assume text_builder(n, i) = ptr
@@ -748,6 +866,39 @@ implement cborrow_get {l}{n,i}{cs} (b, i) =
   $UNSAFE begin
     $UNSAFE.cast{[v:int | 0 <= v; v < 256] (NTH(cs, i, v) | int v)}(byte2int0($UNSAFE.ptr0_get<byte>(ptr_add<byte>(b, i))))
   end
+
+(* -- Int arrays that know their contents -- *)
+
+implement iarr_alloc {n} (n) =
+  $UNSAFE begin
+    $UNSAFE.castvwtp0{[l:agz][cs:cells] (CLEN(cs, n), ZEROS(cs, n) | iarr(l, n, cs))}(_calloc(n, sizeof<int>))
+  end
+
+implement iarr_free {l}{n}{cs} (a) =
+  $UNSAFE begin $extfcall(void, "free", a) end
+
+implement iarr_get {l}{n,i}{cs} (a, i) =
+  $UNSAFE begin
+    $UNSAFE.cast{[v:int | ~2147483648 <= v; v <= 2147483647] (NTH(cs, i, v) | int v)}($UNSAFE.ptr0_get<int>(ptr_add<int>(a, i)))
+  end
+
+implement iarr_set {l}{n,i}{cs}{v} (a, i, v) = let
+  val () = $UNSAFE begin $UNSAFE.ptr0_set<int>(ptr_add<int>(a, i), v) end
+in
+  $UNSAFE begin $UNSAFE.castvwtp0{[cs2:cells] (SETC(cs, i, v, cs2) | iarr(l, n, cs2))}(a) end
+end
+
+(* Not trusted: iarr_get with the bound the proof gives *)
+implement iarr_get_in {l}{n,i}{cs}{lo,hi} (pf | a, i) = let
+  val (p | v) = iarr_get{l}{n,i}{cs}(a, i)
+  prval () = allin_nth(pf, p)
+in v end
+
+(* Not trusted: iarr_set with the proof kept *)
+implement iarr_set_in {l}{n,i}{cs}{lo,hi}{v} (pf | a, i, v) = let
+  val (s | a2) = iarr_set{l}{n,i}{cs}{v}(a, i, v)
+  prval pf2 = allin_setc(pf, s)
+in (pf2 | a2) end
 
 (* -- Element access -- *)
 
