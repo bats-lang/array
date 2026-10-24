@@ -1,0 +1,9 @@
+function main0
+line 8
+the linear dynamic variable [a$4999(-1)] is no longer available.
+the dynamic expression cannot be assigned the type [S2Eapp(S2Ecst(iarr); S2EVar(5634), S2EVar(5635), S2EVar(5637))].
+mismatch of static terms (tyleq):
+The actual term is: S2Eerrexp()
+The needed term is: S2Eapp(S2Ecst(iarr); S2EVar(5634), S2EVar(5635), S2EVar(5637))
+line 5
+the linear dynamic variable [a$4999(-1)] needs to be consumed but it is preserved with the type [S2Eapp(S2Ecst(iarr); S2EVar(5634), S2EVar(5635), S2EVar(5637))] instead.
