@@ -1,0 +1,6 @@
+[package]
+name = "iarr-too-large"
+kind = "bin"
+
+[dependencies]
+"array" = ""

@@ -1,0 +1,6 @@
+[package]
+name = "iarr-widen-narrower"
+kind = "bin"
+
+[dependencies]
+"array" = ""

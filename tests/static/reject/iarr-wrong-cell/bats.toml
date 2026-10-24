@@ -1,0 +1,6 @@
+[package]
+name = "iarr-wrong-cell"
+kind = "bin"
+
+[dependencies]
+"array" = ""

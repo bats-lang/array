@@ -1,0 +1,6 @@
+[package]
+name = "iarr-past-end"
+kind = "bin"
+
+[dependencies]
+"array" = ""

@@ -1,0 +1,6 @@
+[package]
+name = "iarr-same-cell-is-other"
+kind = "bin"
+
+[dependencies]
+"array" = ""

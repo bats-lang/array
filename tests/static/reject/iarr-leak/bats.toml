@@ -1,0 +1,6 @@
+[package]
+name = "iarr-leak"
+kind = "bin"
+
+[dependencies]
+"array" = ""

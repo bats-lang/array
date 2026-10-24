@@ -1,0 +1,6 @@
+[package]
+name = "iarr-bound-after-plain-set"
+kind = "bin"
+
+[dependencies]
+"array" = ""

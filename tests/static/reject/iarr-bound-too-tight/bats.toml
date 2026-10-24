@@ -1,0 +1,6 @@
+[package]
+name = "iarr-bound-too-tight"
+kind = "bin"
+
+[dependencies]
+"array" = ""

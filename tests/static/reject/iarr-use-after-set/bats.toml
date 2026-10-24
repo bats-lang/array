@@ -1,0 +1,6 @@
+[package]
+name = "iarr-use-after-set"
+kind = "bin"
+
+[dependencies]
+"array" = ""
