@@ -1,0 +1,6 @@
+[package]
+name = "alloc-checked"
+kind = "bin"
+
+[dependencies]
+"array" = ""

@@ -1,0 +1,6 @@
+[package]
+name = "alloc-checked-some-as-null"
+kind = "bin"
+
+[dependencies]
+"array" = ""

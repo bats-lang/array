@@ -1,0 +1,6 @@
+[package]
+name = "alloc-checked-tight"
+kind = "bin"
+
+[dependencies]
+"array" = ""
