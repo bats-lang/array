@@ -1,0 +1,6 @@
+[package]
+name = "append-functional-other-first"
+kind = "bin"
+
+[dependencies]
+"array" = ""

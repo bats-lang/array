@@ -1,0 +1,6 @@
+[package]
+name = "append-nil-wrong-both"
+kind = "bin"
+
+[dependencies]
+"array" = ""

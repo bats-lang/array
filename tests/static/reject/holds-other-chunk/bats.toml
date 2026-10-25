@@ -1,0 +1,6 @@
+[package]
+name = "holds-other-chunk"
+kind = "bin"
+
+[dependencies]
+"array" = ""

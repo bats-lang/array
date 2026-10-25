@@ -1,0 +1,6 @@
+[package]
+name = "append-use"
+kind = "bin"
+
+[dependencies]
+"array" = ""

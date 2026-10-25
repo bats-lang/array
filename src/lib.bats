@@ -388,6 +388,34 @@ arena_destroy
   | {c,v:int}{cs:cells} SETC_here(ccons(c, cs), 0, v, ccons(v, cs))
   | {c,v:int}{cs,cs2:cells}{i:nat} SETC_there(ccons(c, cs), i + 1, v, ccons(c, cs2)) of SETC(cs, i, v, cs2)
 
+(* APPEND_SIZED(first, second, both, n): both is first and then second, first being n cells; the n is what a lemma's termination metric reads (keyword: append) *)
+#pub dataprop APPEND_SIZED(cells, cells, cells, int) =
+  | {second:cells} APPEND_SIZED_nil(cnil(), second, second, 0)
+  | {x:int}{first,second,both:cells}{n:nat} APPEND_SIZED_cons(ccons(x, first), second, ccons(x, both), n + 1) of APPEND_SIZED(first, second, both, n)
+
+(* APPEND(first, second, both): both is the cells first and then the cells second (keyword: append).
+   Made by APPEND_nil and APPEND_cons below: a recursive proof function needs a termination metric, which an
+   index-free relation does not give, so the relation holds the size of first beside it. *)
+#pub dataprop APPEND(cells, cells, cells) =
+  | {first,second,both:cells}{n:nat} APPEND_made(first, second, both) of APPEND_SIZED(first, second, both, n)
+
+#pub prfun APPEND_nil {second:cells} (): APPEND(cnil(), second, second)
+
+primplement APPEND_nil {second} () = APPEND_made(APPEND_SIZED_nil())
+
+#pub prfun APPEND_cons {x:int}{first,second,both:cells} (APPEND(first, second, both)): APPEND(ccons(x, first), second, ccons(x, both))
+
+primplement APPEND_cons {x}{first,second,both} (p) =
+  (case+ p of APPEND_made(s) => APPEND_made(APPEND_SIZED_cons(s)))
+
+(* CELLS_EQ(first, second): first and second are the same cells; its one constructor is the only way to have it (keyword: append) *)
+#pub dataprop CELLS_EQ(cells, cells) =
+  | {cs:cells} CELLS_EQ_refl(cs, cs)
+
+(* HOLDS(buffer, chunk): the borrowed buffer's cells begin with the chunk, the rest being whatever follows (keyword: append) *)
+#pub dataprop HOLDS(cells, cells) =
+  | {buffer,chunk,rest:cells} HOLDS_mk(buffer, chunk) of APPEND(chunk, rest, buffer)
+
 (* ============================================================
    What the cells of an array are, proved
    ============================================================ *)
@@ -444,6 +472,23 @@ prfun _nth_functional {cs:cells}{i:nat}{v,w:int} .<i>. (p: NTH(cs, i, v), q: NTH
   | NTH_there(p1) => (case+ q of NTH_there(q1) => _nth_functional(p1, q1))
 
 primplement nth_functional {cs}{i}{v,w} (p, q) = _nth_functional(p, q)
+
+(* The cells first and second have one concatenation (keyword: append) *)
+#pub prfun append_functional {first,second,both,other:cells} (APPEND(first, second, both), APPEND(first, second, other)): CELLS_EQ(both, other)
+
+prfun _append_sized_functional {first,second,both,other:cells}{n,m:nat} .<n>.
+  (p: APPEND_SIZED(first, second, both, n), q: APPEND_SIZED(first, second, other, m)): CELLS_EQ(both, other) =
+  case+ p of
+  | APPEND_SIZED_nil() => (case+ q of APPEND_SIZED_nil() => CELLS_EQ_refl())
+  | APPEND_SIZED_cons(p1) =>
+    (case+ q of
+     | APPEND_SIZED_cons(q1) =>
+       (case+ _append_sized_functional(p1, q1) of CELLS_EQ_refl() => CELLS_EQ_refl()))
+
+prfn _append_functional {first,second,both,other:cells} (p: APPEND(first, second, both), q: APPEND(first, second, other)): CELLS_EQ(both, other) =
+  case+ p of APPEND_made(ps) => (case+ q of APPEND_made(qs) => _append_sized_functional(ps, qs))
+
+primplement append_functional {first,second,both,other} (p, q) = _append_functional(p, q)
 
 (* ============================================================
    Cells that are ints, with a bound (bats-lang/array#49)

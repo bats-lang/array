@@ -1,0 +1,6 @@
+[package]
+name = "cells-eq-different"
+kind = "bin"
+
+[dependencies]
+"array" = ""
