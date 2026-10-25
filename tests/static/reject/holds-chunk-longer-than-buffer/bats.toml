@@ -1,0 +1,6 @@
+[package]
+name = "holds-chunk-longer-than-buffer"
+kind = "bin"
+
+[dependencies]
+"array" = ""

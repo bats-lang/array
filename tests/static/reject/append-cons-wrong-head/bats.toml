@@ -1,0 +1,6 @@
+[package]
+name = "append-cons-wrong-head"
+kind = "bin"
+
+[dependencies]
+"array" = ""

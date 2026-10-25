@@ -251,6 +251,31 @@ program proved when it wrote it, and a dependent needs no runtime clamp:
   statements: `allin_widen` and `allin_zeros` with `hi + 1` (a wider bound is
   implied by the narrower).
 
+## Appended cells: APPEND, CELLS_EQ, HOLDS (bats-lang/array#82)
+
+The one relation the file writer and reader (file#76) and zip's INFLATES (zip#64) share, on
+`cells` (keyword: append). Additive: no existing form changes.
+
+* `APPEND(first, second, both)`: both is the cells first and then the cells second. Made by
+  `APPEND_nil() : APPEND(cnil, second, second)` and `APPEND_cons(p) : APPEND(ccons(x, first), second,
+  ccons(x, both))` from `p : APPEND(first, second, both)`. These two are proof functions, not
+  constructors of a dataprop: a recursive proof function needs a termination metric, an index-free
+  relation gives none, and the length of first is not at hand where the lemma is stated. So `APPEND` has the one
+  constructor `APPEND_made` over `APPEND_SIZED(first, second, both, n)`, which holds the length n of
+  first; `APPEND_nil` and `APPEND_cons` build it (a recursive proof function with no metric is refused by patsopt: "a termination metric is missing"). A proof is built with the two
+  functions; it is taken apart with `APPEND_made`, and `APPEND_SIZED_nil` / `APPEND_SIZED_cons` below it.
+* `CELLS_EQ(first, second)`: the same cells; its one constructor `CELLS_EQ_refl` is the only way to have
+  it. `append_functional : (APPEND(first, second, both), APPEND(first, second, other)) -> CELLS_EQ(both,
+  other)`, proved here by recursion on the size (no `praxi`, no `assume`).
+* `HOLDS(buffer, chunk)`: the buffer's cells begin with the chunk (`HOLDS_mk` of `APPEND(chunk, rest,
+  buffer)`, the rest being whatever follows), for a borrowed buffer that holds more than the chunk read into it.
+* Nothing here is trusted: all proof, no new primitive, so there is no dynamic test; the types are pinned by
+  `tests/static/accept/append-use` and the rejects `append-nil-wrong-both`, `append-cons-wrong-head`,
+  `append-swapped`, `append-functional-other-first`, `cells-eq-different`, `holds-other-chunk` and
+  `holds-chunk-longer-than-buffer`, each with its exact `expect`. quire's `mutation_check.py --root` over
+  `src/lib.bats` makes false variants of `APPEND_nil`, `APPEND_cons` and `append_functional` and the compiler
+  rejects every one.
+
 ## The accessors as templates (bats-lang/sha256#59)
 
 `barr_get`, `barr_get_be32` and `barr_set` are external symbols: a dependent
