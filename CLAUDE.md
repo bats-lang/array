@@ -53,8 +53,7 @@ out), `alloc-checked-some-as-null` (the result freed as an array) and
 ## The arena is the pool
 
 `arena_create_class<a>(class | max)` reserves one zeroed region of `max`
-elements, `max` one of the size classes (the deprecated `arena_create<a>(max)`
-takes any `max` up to 268435456: next section); `arena_alloc` hands out pieces of it, `arena_return` takes them
+elements, `max` one of the size classes (next section); `arena_alloc` hands out pieces of it, `arena_return` takes them
 back, and `arena_destroy` releases the region. It is sound by type, with
 no runtime checks:
 
@@ -68,40 +67,28 @@ no runtime checks:
 * The arena counts outstanding pieces (`k`); `arena_destroy` needs
   `k = 0`.
 * Pieces are never reused, so they are zero bytes; as with `alloc`,
-  `arena_create_class` and `arena_create` have instances only for element types where zero bytes
+  `arena_create_class` has instances only for element types where zero bytes
   are a valid value.
-* When the region cannot be had, `arena_create_class` (and `arena_create`) returns `arena_none`,
+* When the region cannot be had, `arena_create_class` returns `arena_none`,
   never a null arena.
 
-## Two ways to make an arena, one deprecated (array#29, array#67)
+## One way to make an arena (array#29, array#67)
 
-Both return the same `arena_made(a, max)` and the same `arena`, so everything
-after the creation is the same:
-
-* `arena_create_class<a>(class | max)` is the form callers move to: its size
-  is one of the classes (next section).
-* `arena_create<a>(max)` is **deprecated**: it takes any `max` with
-  `0 < max <= 268435456`, as it always did, and is kept only so that no
-  dependent breaks. Array#29 first replaced it in place by the class form; an
-  in-place replacement fails every dependent and the package repository's
-  `verify` (the same lesson as process's "Spawn keeps its old signatures",
-  process#62 restored by process#64). The owner's ruling, 2026-10-21: "Just....keep
-  supporting both, have a p1 ticket to remove the deprecated version." That
-  ticket is array#67, which removes `arena_create` once every dependent has
-  moved. Nothing in this package calls it except its own tests.
-
-`tests/static/accept/arena-create-deprecated` accepts the deprecated form
-with a size that is no class, and `tests/dynamic/arena-create-deprecated`
-calls it for each element type it has (byte, char, bool, int, uint, Int), so
-an edit cannot drop it without a failing test. The tests that call it are
-removed with it (array#67).
+`arena_create_class<a>(class | max)` is the only way: its size is one of the
+classes (next section). The bare-size `arena_create<a>(max)` that array#29 first
+replaced in place, and that was then kept beside it (an in-place replacement
+fails every dependent and the package repository's `verify`, the same lesson as
+process's "Spawn keeps its old signatures", process#62 restored by process#64;
+the owner's ruling, 2026-10-21: "Just....keep supporting both, have a p1 ticket
+to remove the deprecated version."), was removed by array#67 once the newest
+archive of no package named it (checked in repository-prototype, listed in the
+pull request). Its two tests, `tests/static/accept/arena-create-deprecated` and
+`tests/dynamic/arena-create-deprecated`, went with it. No static reject named it.
 
 ## An arena's size is a class
 
 An arena made by `arena_create_class` is one of five sizes fixed at
-compile time (`ARENA_CLASS`); the deprecated `arena_create` (removed by
-array#67) makes any size up to 268435456 and gives the allocator none of
-what follows. The class sizes are counted in elements of its type, not bytes: 65536, 262144, 1048576,
+compile time (`ARENA_CLASS`). The class sizes are counted in elements of its type, not bytes: 65536, 262144, 1048576,
 4194304 and 16777216 elements, powers of 4. For a byte arena those are
 64 KiB, 256 KiB, 1 MiB, 4 MiB and 16 MiB. For an arena of any other
 element type the class is an element count and the byte size is that
@@ -110,7 +97,7 @@ the byte figures hold for byte arenas only. Every arena quire has is a
 byte arena.
 
 A freed region of a class arena is then the size of the next one asked for
-(not so while the deprecated form exists: its regions are of any size), so an
+(every arena is a class), so an
 allocator can keep one free list per class and reuse a region whole. The
 allocator's free list of large blocks (bats-lang/bats#241, open) reuses a
 block only for a request between half its size and its full size, so
