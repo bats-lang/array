@@ -5,7 +5,9 @@
 # expressed in types (e.g. which value a comparison returns).
 #
 # If the package has a `ulimit-v` file, the binary runs under `ulimit -v` of
-# that many KiB (a tight address space, so malloc answers NULL).
+# that many KiB (a tight address space, so malloc answers NULL). Shell because
+# a bats test cannot lower RLIMIT_AS (the process package has no setrlimit);
+# bats itself sets it the same way (keyword: array allocation-failure).
 #
 # If the package has an `expected` file, the binary's output must match
 # it exactly.

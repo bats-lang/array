@@ -33,8 +33,19 @@ old `alloc`, with the address space the machine gives; `alloc-checked-tight`
 is the same program run under `ulimit -v 5000` (its `ulimit-v` file, which
 `tests/dynamic/run.sh` applies): the program starts and has a 16-byte array
 (`small`), a 4 MiB one (1048576 `Int`) is `alloc_none`, and the program goes
-on (measured: it starts under any limit from 3000 to 6500 KiB and the 4 MiB
-array is refused from 6500 down; at 7000 it is had). `tests/static/accept/alloc-checked-use` matches both
+on (measured, PR #87: at 2000 and 2500 KiB the program does not load, at 3000,
+5000 and 6500 it prints `big none`, at 7000 it prints `big 9`, so 5000 is
+inside the window with room on both sides).
+
+The limit is set by `sh`'s `ulimit -v` in `tests/dynamic/run.sh`, the one shell
+line of this change. Avenue exhausted: a test written in bats cannot lower
+RLIMIT_AS, because the process package has no setrlimit (bats's `.claude/rules/patsopt-caps.md`
+says so) and the array package has no such call and may not gain C for a test; the
+mechanism bats itself uses for the same limit is `sh -c 'ulimit -v ...'`
+(`patsopt_only` in bats's `src/helpers.bats`; `tests/patsopt-cap` and
+`tests/full-disk` there use `ulimit -v` and `ulimit -f` the same way), and no
+sibling package's tests/dynamic sets a resource limit (searched: process, file,
+builder, bridge, zip, bats's tests for `ulimit`, `setrlimit`, `RLIMIT`). `tests/static/accept/alloc-checked-use` matches both
 constructors; `reject/alloc-checked-unmatched` (the failure constructor left
 out), `alloc-checked-some-as-null` (the result freed as an array) and
 `alloc-checked-too-large` (1048577 elements) each fail for the one line they guard.
