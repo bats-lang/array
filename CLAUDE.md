@@ -15,6 +15,41 @@ Code that needs more memory than one bounded allocation (a large file, a
 large output) uses a pool: one region reserved up front, handed out in
 pieces whose sizes the types account for, and released as a whole.
 
+## Allocation failure is in the type (array#80, keyword: array allocation-failure)
+
+`alloc` has the type `[l:agz] arr(a, l, n)`, so a NULL from calloc at a tight
+address-space limit (`ulimit -v`) is not representable and was written
+through (bats#288: the builder's `put_byte`). `alloc_checked<a>(n)` is beside
+it, with the same size bound (`n <= 1048576`) and the same instances (byte,
+char, bool, int, uint, Int), and answers `alloc_made(a, n)`: `alloc_some(arr)`
+or `alloc_none()`, the style of `arena_made`. The result is a linear
+datavtype, so a caller must match `alloc_none` before it has an array.
+Nothing is deprecated: `alloc` is unchanged, and the ticket (array#80) says
+no removal ticket is filed. Moving a dependent (builder, so bats's
+`record-commit`) to the new function is a ticket in that repository.
+
+`tests/dynamic/alloc-checked` calls `alloc_checked` for each instance and the
+old `alloc`, with the address space the machine gives; `alloc-checked-tight`
+is the same program run under `ulimit -v 5000` (its `ulimit-v` file, which
+`tests/dynamic/run.sh` applies): the program starts and has a 16-byte array
+(`small`), a 4 MiB one (1048576 `Int`) is `alloc_none`, and the program goes
+on (measured, PR #87: at 2000 and 2500 KiB the program does not load, at 3000,
+5000 and 6500 it prints `big none`, at 7000 it prints `big 9`, so 5000 is
+inside the window with room on both sides).
+
+The limit is set by `sh`'s `ulimit -v` in `tests/dynamic/run.sh`, the one shell
+line of this change. Avenue exhausted: a test written in bats cannot lower
+RLIMIT_AS, because the process package has no setrlimit (bats's `.claude/rules/patsopt-caps.md`
+says so) and the array package has no such call and may not gain C for a test; the
+mechanism bats itself uses for the same limit is `sh -c 'ulimit -v ...'`
+(`patsopt_only` in bats's `src/helpers.bats`; `tests/patsopt-cap` and
+`tests/full-disk` there use `ulimit -v` and `ulimit -f` the same way), and no
+sibling package's tests/dynamic sets a resource limit (searched: process, file,
+builder, bridge, zip, bats's tests for `ulimit`, `setrlimit`, `RLIMIT`). `tests/static/accept/alloc-checked-use` matches both
+constructors; `reject/alloc-checked-unmatched` (the failure constructor left
+out), `alloc-checked-some-as-null` (the result freed as an array) and
+`alloc-checked-too-large` (1048577 elements) each fail for the one line they guard.
+
 ## The arena is the pool
 
 `arena_create_class<a>(class | max)` reserves one zeroed region of `max`

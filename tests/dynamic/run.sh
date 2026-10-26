@@ -4,6 +4,11 @@
 # first); it must build and exit 0. Used where a property cannot be
 # expressed in types (e.g. which value a comparison returns).
 #
+# If the package has a `ulimit-v` file, the binary runs under `ulimit -v` of
+# that many KiB (a tight address space, so malloc answers NULL). Shell because
+# a bats test cannot lower RLIMIT_AS (the process package has no setrlimit);
+# bats itself sets it the same way (keyword: array allocation-failure).
+#
 # If the package has an `expected` file, the binary's output must match
 # it exactly.
 #
@@ -36,7 +41,7 @@ for d in "$ROOT"/tests/dynamic/*/; do
   # --dev: the checkout uploads as a dev version, which bats lock skips
   # without it (as the Rust bats does).
   if (cd "$w" && bats lock --dev --repository "$TMP/repo" && bats build --only debug --only native --repository "$TMP/repo") > "$TMP/$n.log" 2>&1 \
-     && (cd "$w" && $LIMIT "./dist/debug/$n") > "$TMP/$n.out" 2>&1 \
+     && (cd "$w" && if [ -f "$d/ulimit-v" ]; then $LIMIT sh -c 'ulimit -v "$1" && exec "$2"' sh "$(cat "$d/ulimit-v")" "./dist/debug/$n"; else $LIMIT "./dist/debug/$n"; fi) > "$TMP/$n.out" 2>&1 \
      && { [ ! -f "$d/expected" ] || diff -u "$d/expected" "$TMP/$n.out"; }; then
     echo "ok   $n"
   else

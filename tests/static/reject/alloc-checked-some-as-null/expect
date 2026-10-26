@@ -1,0 +1,6 @@
+function main0
+line 7
+the dynamic expression cannot be assigned the type [S2Eapp(S2Ecst(arrx); S2Ecst(byte_t0ype), S2EVar(5673), S2EVar(5674), S2Ecst(null_addr))].
+mismatch of static terms (tyleq):
+The actual term is: S2Eapp(S2Ecst(alloc_made); S2Ecst(byte_t0ype), S2Eintinf(4))
+The needed term is: S2Eapp(S2Ecst(arrx); S2Ecst(byte_t0ype), S2EVar(5673), S2EVar(5674), S2Ecst(null_addr))

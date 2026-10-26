@@ -1,0 +1,4 @@
+function main0
+line 6
+pattern match is nonexhaustive:
+alloc_none()

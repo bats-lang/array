@@ -37,6 +37,21 @@ alloc
   (n: int n)
   : [l:agz] arr(a, l, n)
 
+(* The allocation could not be had: alloc_none, never a null array (alloc has
+   no such case, so at a tight address-space limit it answers a NULL that its
+   type cannot show; array allocation-failure). *)
+#pub datavtype alloc_made(a:t@ype, n:int) =
+  | {l:agz} alloc_some(a, n) of arr(a, l, n)
+  | alloc_none(a, n) of ()
+
+(* alloc, with the failure in the type as arena_made does for an arena: the
+   caller must match alloc_none. Same instances as alloc. *)
+#pub fun{a:t@ype}
+alloc_checked
+  {n:pos | n <= 1048576}
+  (n: int n)
+  : alloc_made(a, n)
+
 #pub fun{a:t@ype}
 free
   {l:agz}{n:nat}
@@ -826,6 +841,23 @@ implement alloc<bool>(n) = _alloc_zeroed<bool>(n)
 implement alloc<int>(n) = _alloc_zeroed<int>(n)
 implement alloc<uint>(n) = _alloc_zeroed<uint>(n)
 implement alloc<Int>(n) = _alloc_zeroed<Int>(n)
+
+$UNSAFE begin extern fun _calloc_maybe (n: int, size: size_t): [l:addr] ptr l = "mac#calloc" end
+
+(* calloc answers NULL when the memory cannot be had: that is alloc_none. *)
+fn{a:t@ype} _alloc_checked_zeroed {n:pos} (n: int n): alloc_made(a, n) = let
+  val p = _calloc_maybe(n, sizeof<a>)
+in
+  if ptr_isnot_null(p) then alloc_some(p)
+  else alloc_none()
+end
+
+implement alloc_checked<byte>(n) = _alloc_checked_zeroed<byte>(n)
+implement alloc_checked<char>(n) = _alloc_checked_zeroed<char>(n)
+implement alloc_checked<bool>(n) = _alloc_checked_zeroed<bool>(n)
+implement alloc_checked<int>(n) = _alloc_checked_zeroed<int>(n)
+implement alloc_checked<uint>(n) = _alloc_checked_zeroed<uint>(n)
+implement alloc_checked<Int>(n) = _alloc_checked_zeroed<Int>(n)
 
 implement{a}
 free{l}{n}(arr) =

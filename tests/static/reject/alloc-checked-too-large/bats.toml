@@ -1,0 +1,6 @@
+[package]
+name = "alloc-checked-too-large"
+kind = "bin"
+
+[dependencies]
+"array" = ""
