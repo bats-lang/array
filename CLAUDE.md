@@ -149,12 +149,6 @@ bound.
 `barr(l, n, cs)` is an array of n bytes at l that holds the cells `cs`
 (`cnil`, `ccons`), so a program can prove what it reads and writes:
 
-* `barr_get` gives the cell with the proof `NTH(cs, i, v)`; `barr_set`
-  consumes the array and gives it back with `SETC(cs, i, v, cs2)`;
-  `barr_alloc` and `barr_of_arr` give cells nothing is known of (and
-  `CLEN(cs, n)`: their number), `barr_to_arr` takes the cells away so that
-  what knows nothing of them (a platform call that fills the array) may
-  write it, and `barr_copy` gives another array of the same cells.
 * `barr_get_be32(a, i)` (sha256#40) gives cells i to i + 3 as the four bytes
   of a big-endian word with the four proofs `NTH(cs, i + k, b_k)`, in one
   call. It is an ordinary function over four `barr_get` (explicit static
@@ -243,11 +237,6 @@ bound.
 ints (keyword: iarr), so a value read back from a table has the index the
 program proved when it wrote it, and a dependent needs no runtime clamp:
 
-* `iarr_alloc` (at most 1048576 elements, as `alloc`) gives `CLEN(cs, n)` and
-  `ZEROS(cs, n)` (calloc leaves every cell 0); `iarr_get` gives the cell with
-  `NTH(cs, i, v)`; `iarr_set` consumes the array and gives it back with
-  `SETC(cs, i, v, cs2)`; `iarr_free`. The cell lemmas are `barr`'s (`setc_nth_same`,
-  `setc_nth_other`, `nth_functional`, `nth_in_len`), on the same `cells`.
 * **Element width: 32 bits** (keyword: iarr width). The dependents' values are
   positions of a file, entry numbers and chain links (bats's with-env table:
   positions under 65537, entries under 1025), which fit with room to spare. A
@@ -341,29 +330,3 @@ override gets its body too. Writing such a body needs an unsafe package, since i
 casts. The templates are not new trusted primitives (the owner's ruling). The
 exposure is tracked by bats-lang/bats#421, which rejects an `implement` of a
 template or function that another package declares.
-
-## CI is pinned
-
-Every input to CI is pinned in the source (bats-lang/repository-prototype#269),
-so a commit that passes keeps passing:
-
-* The package has no dependencies, so its `bats.lock` is the empty one `bats lock --repository <dir>` writes ("wrote bats.lock (no dependencies)"); the shared package-check.yml requires a lock, so `bats check` also refuses a `#use` the lock does not name.
-* The compiler is the commit in `.github/bats-version`, read by every
-  workflow that builds bats (and by the publish workflow).
-* The package repository is fetched at the commit in
-  `.github/repository-version`, so what the test packages under `tests/`
-  lock (`bats lock --dev`) is pinned too.
-* `publish.yml` and `relock-pins.yml` in bats-lang/repository-prototype are
-  called by commit, never `@main`.
-
-Pins move only through a reviewed pull request that runs the same CI. The
-daily `relock.yml` (the shared `relock-pins.yml`) relocks against the
-newest, moves the compiler and repository pins, pushes `relock/<date>`,
-opens a pull request listing the old and new versions and dispatches
-`check.yml` on it, so a breaking publish shows as a red relock pull
-request and main stays green. GITHUB_TOKEN cannot change workflow files,
-so without a `RELOCK_TOKEN` secret that pull request lists a workflow pin
-that would move instead of moving it: move it in a pull request of its
-own. A pull request that needs newer packages runs `bats lock
---repository <dir>` and commits `bats.lock` (and
-`.github/repository-version`) with the change.
